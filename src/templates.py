@@ -31,7 +31,7 @@ TEMPLATES: list[dict] = [
         "description": "Section-by-section summary preserving structure.",
         "structure": (
             "A '## Summary' overview, then one '### ' subsection per major "
-            "topic in the document, each with 2-4 sentences. End with a "
+            "topic in the document, each with 5-15 sentences. End with a "
             "'## Conclusion' section."
         ),
     },
@@ -40,7 +40,7 @@ TEMPLATES: list[dict] = [
         "label": "Bullet key-points",
         "description": "Flat list of the most important takeaways.",
         "structure": (
-            "Only a Markdown bullet list of 6-12 key takeaways. "
+            "Only a Markdown bullet list of 6-20 key takeaways. "
             "No headings, no prose paragraphs."
         ),
     },

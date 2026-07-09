@@ -9,7 +9,7 @@ information density.
 | `executive` | Executive (terse) | One 3-5 sentence paragraph, no headings |
 | `standard` *(default)* | Standard | `## Overview` + `## Key Points` bullets |
 | `detailed` | Detailed | Overview + per-topic `### ` subsections + conclusion |
-| `bullets` | Bullet key-points | Flat 6-12 bullet takeaways |
+| `bullets` | Bullet key-points | Flat 6-20 bullet takeaways |
 | `action_items` | Action items | `## Decisions` + `## Action Items` lists |
 
 ## API
