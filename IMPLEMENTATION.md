@@ -5,41 +5,49 @@ detail lives in [docs/](docs/). See [PRD.md](PRD.md) for goals and
 [AGENTS.md](AGENTS.md) for collaboration rules.
 
 ## Status
-All planned features implemented and tested (46 tests passing). End-to-end
-verified against a live Ollama server.
+All planned features implemented and tested (71 tests passing). End-to-end
+verified against a live Ollama server, including OCR of a scanned PDF.
 
 ## Architecture (one screen)
 Layered. LangChain/LangGraph are confined to the **agent layer**
 (`src/agent.py`, `src/tools.py`); everything else is plain Python.
+`ollama_client.py` uses the plain `ollama` package, not LangChain.
 
 ```
 app.py ─ Streamlit UI, progress, downloads, exit   (no LangChain)
+  ├─ theme.py       Forest palette + injected CSS
   └─ agent.run() ─ LangGraph: ingest→chunk→map→reduce→finalize
-       ├─ tools.py     ChatOllama wrapper           (LangChain OK)
-       ├─ extract.py   file bytes → text
-       ├─ language.py  detect source language
-       ├─ templates.py template registry
-       ├─ models.py    model registry + availability
-       ├─ export.py    summary → md/pdf/docx
-       ├─ prompts.py   all prompt constants
-       └─ config.py    dotenv config
+       ├─ tools.py         ChatOllama wrapper        (LangChain OK)
+       ├─ extract.py       file bytes → Markdown
+       │    └─ md_convert.py  PDF per-page rewrite/OCR, DOCX→MD
+       │         └─ ollama_client.py  vision OCR + text rewrite
+       ├─ language.py      detect source language
+       ├─ templates.py     template registry
+       ├─ models.py        model registry + availability
+       ├─ export.py        summary → md/pdf/docx
+       ├─ prompts.py       all prompt constants
+       └─ config.py        dotenv config
 ```
 
 Data flow: `app.py` collects sidebar options + uploaded file → `agent.run()`
-extracts text, detects language, chunks, map-reduces via the selected Ollama
-model, and finalizes with the chosen template/language → `export.py` produces
-download bytes. Progress is pushed through an `on_progress(fraction, label)`
-callback so Streamlit stays out of the agent layer.
-Details: [docs/architecture.md](docs/architecture.md),
-[docs/agent.md](docs/agent.md).
+**converts the file to Markdown** (per-page: digital text is LLM-rewritten,
+scanned pages are OCR'd by a vision model), detects language, chunks,
+map-reduces via the selected Ollama model, and finalizes with the chosen
+template/language → `export.py` produces download bytes. Progress is pushed
+through an `on_progress(fraction, label)` callback so Streamlit stays out of the
+agent layer. Details: [docs/architecture.md](docs/architecture.md),
+[docs/agent.md](docs/agent.md), [docs/ingestion.md](docs/ingestion.md).
 
 ## Module map
 | Module | Role | Docs |
 |---|---|---|
-| `src/app.py` | Streamlit UI: sidebar, upload, progress, downloads, exit | [architecture](docs/architecture.md) |
+| `src/app.py` | Streamlit UI: sidebar, upload, progress, downloads, exit | [ui](docs/ui.md) |
+| `src/theme.py` | Forest palette + injectable CSS | [ui](docs/ui.md) |
 | `src/agent.py` | LangGraph map-reduce summarizer + `run()` entry point | [agent](docs/agent.md) |
 | `src/tools.py` | `ChatOllama` factory + prompt runner | [agent](docs/agent.md) |
-| `src/extract.py` | PDF/DOCX/TXT/MD → text | [ingestion](docs/ingestion.md) |
+| `src/extract.py` | PDF/DOCX/TXT/MD → Markdown (dispatch) | [ingestion](docs/ingestion.md) |
+| `src/md_convert.py` | PDF per-page rewrite/OCR routing, DOCX → Markdown | [ingestion](docs/ingestion.md) |
+| `src/ollama_client.py` | Plain-Python Ollama: `ocr`, `rewrite`, `unload` | [ingestion](docs/ingestion.md) |
 | `src/language.py` | `langdetect` source-language detection | [ingestion](docs/ingestion.md) |
 | `src/templates.py` | Summary template registry | [templates](docs/templates.md) |
 | `src/models.py` | Model registry + Ollama availability check | [models](docs/models.md) |
@@ -48,10 +56,24 @@ Details: [docs/architecture.md](docs/architecture.md),
 | `src/config.py` | dotenv-backed config | — |
 
 ## Key decisions
+- **Markdown-first ingestion**: every upload becomes Markdown before
+  summarization. PDF pages are routed per page — a text layer ≥ 40 chars is
+  LLM-rewritten (wording preserved); anything less is rasterized and OCR'd by a
+  vision model. Ported from
+  [KB_BS_local-wiki-he](https://github.com/ToHeinAC/KB_BS_local-wiki-he)
+  (Apache-2.0). See [docs/ingestion.md](docs/ingestion.md).
+- **OCR is an Ollama vision model** (`deepseek-ocr:3b`), not tesseract — keeps
+  the app offline with no system binaries.
+- **Cost**: the per-page rewrite means a digital PDF costs one LLM call per page
+  before summarizing. Deliberate, matching the reference repo; set
+  `REWRITE_MODEL` to a fast model for large documents.
+- **Theme**: Forest palette (green/cream), Inter + Libre Baskerville, ported
+  from the same repo. Colors are duplicated in `.streamlit/config.toml` and
+  `theme.FOREST` and must stay in sync. See [docs/ui.md](docs/ui.md).
 - **Models**: `gemma4:e2b` (fast), `gemma4:e4b` (standard, default),
   `qwen3:14b` (smarter), `gpt-oss:20b` (accurate). Tags match `ollama list`.
   Uninstalled models are flagged in the UI. See [docs/models.md](docs/models.md).
-- **PDF**: `fpdf2` (pure Python). Uses a system DejaVu Unicode font when
+- **PDF export**: `fpdf2` (pure Python). Uses a system DejaVu Unicode font when
   present, else Helvetica with latin-1 fallback. See [docs/export.md](docs/export.md).
 - **Formats in**: PDF, DOCX, TXT, MD. **Formats out**: MD, PDF, DOCX.
 - **Chunking**: character-bounded (6000/200 overlap); single-chunk documents
@@ -66,5 +88,7 @@ Test map: [docs/testing.md](docs/testing.md).
 
 ## Known constraints
 - Requires a reachable Ollama server (`OLLAMA_HOST`, default
-  `http://localhost:11434`).
+  `http://localhost:11434`). Summarizing a PDF also needs `OCR_MODEL` pulled.
 - Port 8506 is mandated by the PRD; free it if another app holds it.
+- The theme's webfonts load from Google Fonts on first paint; without network
+  access the app still runs and falls back to `system-ui` / `Georgia`.

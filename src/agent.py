@@ -11,7 +11,7 @@ from typing import Callable, Optional, TypedDict
 
 from langgraph.graph import END, StateGraph
 
-from src.extract import extract_text
+from src.extract import to_markdown
 from src.language import detect_language
 from src.models import get_model
 from src.prompts import FINALIZE_PROMPT, LANGUAGE_LABELS, MAP_PROMPT, REDUCE_PROMPT
@@ -21,6 +21,7 @@ from src.tools import make_llm, run_prompt
 CHUNK_SIZE = 6000
 CHUNK_OVERLAP = 200
 REDUCE_BATCH = 8  # partial summaries combined per hierarchical reduce step
+INGEST_SHARE = 0.40  # progress budget for the file -> Markdown conversion
 
 ProgressFn = Callable[[float, str], None]
 
@@ -34,6 +35,9 @@ class SummaryState(TypedDict, total=False):
     template_id: str
     model_tag: str
     host: Optional[str]
+    ocr_model: str
+    rewrite_model: str
+    pdf_dpi: int
     chunks: list[str]
     chunk_summaries: list[str]
     summary: str
@@ -63,16 +67,34 @@ def _llm(state: SummaryState):
 
 
 def _ingest(state: SummaryState, config) -> dict:
-    text = state.get("text") or extract_text(state["filename"], state["data"])
+    text = state.get("text")
+    if not text:
+        # Seed at 0.0: the first conversion callback also reports 0 pages done,
+        # so anything higher here would make the progress bar run backwards.
+        _progress(config, 0.0, "Converting to Markdown")
+
+        def on_convert(done: int, total: int, label: str) -> None:
+            fraction = INGEST_SHARE * done / total if total else INGEST_SHARE
+            _progress(config, fraction, label)
+
+        text = to_markdown(
+            state["filename"],
+            state["data"],
+            ocr_model=state["ocr_model"],
+            rewrite_model=state["rewrite_model"],
+            dpi=state["pdf_dpi"],
+            host=state.get("host"),
+            on_progress=on_convert,
+        )
     if not text.strip():
         raise ValueError("No extractable text found in the document.")
-    _progress(config, 0.05, "Reading document")
+    _progress(config, INGEST_SHARE, "Read document")
     return {"text": text, "source_language": detect_language(text)}
 
 
 def _chunk(state: SummaryState, config) -> dict:
     chunks = split_text(state["text"])
-    _progress(config, 0.10, f"Split into {len(chunks)} section(s)")
+    _progress(config, 0.42, f"Split into {len(chunks)} section(s)")
     return {"chunks": chunks}
 
 
@@ -84,14 +106,14 @@ def _map(state: SummaryState, config) -> dict:
     summaries: list[str] = []
     for i, chunk in enumerate(chunks, start=1):
         summaries.append(run_prompt(llm, MAP_PROMPT.format(chunk=chunk)))
-        _progress(config, 0.10 + 0.65 * i / len(chunks), f"Summarizing section {i}/{len(chunks)}")
+        _progress(config, 0.42 + 0.38 * i / len(chunks), f"Summarizing section {i}/{len(chunks)}")
     return {"chunk_summaries": summaries}
 
 
 def _reduce(state: SummaryState, config) -> dict:
     summaries = state["chunk_summaries"]
     llm = _llm(state)
-    _progress(config, 0.80, "Combining section summaries")
+    _progress(config, 0.85, "Combining section summaries")
     while len(summaries) > 1:
         batched: list[str] = []
         for i in range(0, len(summaries), REDUCE_BATCH):
@@ -148,11 +170,15 @@ def run(
     text: str = "",
     target_language: str = "auto",
     host: Optional[str] = None,
+    ocr_model: str = "deepseek-ocr:3b",
+    rewrite_model: str = "gemma4:e4b",
+    pdf_dpi: int = 150,
     on_progress: Optional[ProgressFn] = None,
 ) -> str:
     """Summarize a document and return Markdown.
 
-    Provide either ``text`` or (``filename`` and ``data``).
+    Provide either ``text`` or (``filename`` and ``data``). Files are converted
+    to Markdown first; scanned PDF pages are OCR'd with ``ocr_model``.
     """
     state: SummaryState = {
         "filename": filename,
@@ -162,6 +188,9 @@ def run(
         "template_id": template_id,
         "model_tag": get_model(model_id)["tag"],
         "host": host,
+        "ocr_model": ocr_model,
+        "rewrite_model": rewrite_model,
+        "pdf_dpi": pdf_dpi,
     }
     config = {"configurable": {"on_progress": on_progress}}
     result = build_graph().invoke(state, config=config)

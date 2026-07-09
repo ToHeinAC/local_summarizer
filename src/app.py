@@ -10,7 +10,7 @@ import signal
 
 import streamlit as st
 
-from src import agent, export
+from src import agent, export, theme
 from src.config import load_config
 from src.models import DEFAULT_MODEL_ID, annotate_availability
 from src.prompts import LANGUAGE_LABELS
@@ -25,16 +25,20 @@ def _stars(n: int) -> str:
 
 
 def _sidebar() -> dict:
-    st.sidebar.title("Summarizer")
+    st.sidebar.markdown("## 📝 Summarizer")
+    st.sidebar.markdown("---")
 
+    st.sidebar.caption("LANGUAGE")
     langs = list(LANGUAGE_LABELS)
     language = st.sidebar.selectbox(
         "Summary language",
         langs,
         index=langs.index(CFG.default_language) if CFG.default_language in langs else 0,
         format_func=lambda c: LANGUAGE_LABELS[c].capitalize(),
+        label_visibility="collapsed",
     )
 
+    st.sidebar.caption("TEMPLATE")
     templates = list_templates()
     tpl_ids = [t["id"] for t in templates]
     template_id = st.sidebar.selectbox(
@@ -42,9 +46,11 @@ def _sidebar() -> dict:
         tpl_ids,
         index=tpl_ids.index(DEFAULT_TEMPLATE_ID),
         format_func=lambda i: next(t["label"] for t in templates if t["id"] == i),
+        label_visibility="collapsed",
     )
     st.sidebar.caption(next(t["description"] for t in templates if t["id"] == template_id))
 
+    st.sidebar.caption("MODEL")
     models = annotate_availability(CFG.ollama_host)
     ids = [m["id"] for m in models]
     model_id = st.sidebar.selectbox(
@@ -52,6 +58,7 @@ def _sidebar() -> dict:
         ids,
         index=ids.index(DEFAULT_MODEL_ID),
         format_func=lambda i: next(m["label"] for m in models if m["id"] == i),
+        label_visibility="collapsed",
     )
     model = next(m for m in models if m["id"] == model_id)
     st.sidebar.caption(f"Speed {_stars(model['speed'])}  Quality {_stars(model['quality'])}")
@@ -59,8 +66,8 @@ def _sidebar() -> dict:
     if not model["installed"]:
         st.sidebar.warning(f"`{model['tag']}` is not installed. Run: `ollama pull {model['tag']}`")
 
-    st.sidebar.divider()
-    if st.sidebar.button("Exit app", type="secondary"):
+    st.sidebar.markdown("---")
+    if st.sidebar.button("Exit app", key="exit_btn", use_container_width=True):
         st.sidebar.info("Shutting down…")
         os.kill(os.getpid(), signal.SIGTERM)
 
@@ -68,12 +75,10 @@ def _sidebar() -> dict:
 
 
 def _summarize(uploaded, opts: dict) -> None:
-    bar = st.progress(0.0)
-    status = st.empty()
+    bar = st.progress(0.0, text="Preparing…")
 
     def on_progress(fraction: float, label: str) -> None:
-        bar.progress(min(fraction, 1.0))
-        status.write(label)
+        bar.progress(min(fraction, 1.0), text=label)
 
     try:
         summary = agent.run(
@@ -83,16 +88,17 @@ def _summarize(uploaded, opts: dict) -> None:
             model_id=opts["model"]["id"],
             target_language=opts["language"],
             host=CFG.ollama_host,
+            ocr_model=CFG.ocr_model,
+            rewrite_model=CFG.rewrite_model,
+            pdf_dpi=CFG.pdf_dpi,
             on_progress=on_progress,
         )
     except Exception as exc:  # surface any ingest/LLM failure to the user
         bar.empty()
-        status.empty()
         st.error(f"Summarization failed: {exc}")
         return
 
     bar.empty()
-    status.empty()
     st.session_state["summary"] = summary
     st.session_state["stem"] = os.path.splitext(uploaded.name)[0]
 
@@ -106,14 +112,22 @@ def _downloads(summary: str, stem: str) -> None:
             data=exporter(summary),
             file_name=f"{stem}_summary.{fmt}",
             mime=mime,
+            use_container_width=True,
         )
 
 
 def main() -> None:
-    st.set_page_config(page_title="Local Summarizer", page_icon="📝")
+    st.set_page_config(
+        page_title="Local Summarizer",
+        page_icon="📝",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+    st.markdown(theme.build_css(), unsafe_allow_html=True)
     opts = _sidebar()
 
     st.title("Document Summarizer")
+    st.caption("Documents are converted to Markdown first; scanned PDF pages are OCR'd locally.")
     uploaded = st.file_uploader("Upload a document", type=ACCEPTED)
 
     disabled = uploaded is None or not opts["model"]["installed"]
@@ -121,8 +135,10 @@ def main() -> None:
         _summarize(uploaded, opts)
 
     if summary := st.session_state.get("summary"):
+        st.markdown("---")
         st.subheader("Summary")
-        st.markdown(summary)
+        with st.container(border=True):
+            st.markdown(summary)
         _downloads(summary, st.session_state.get("stem", "document"))
 
 

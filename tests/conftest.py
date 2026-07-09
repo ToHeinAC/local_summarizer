@@ -44,6 +44,44 @@ def pdf_bytes() -> bytes:
     return bytes(pdf.output())
 
 
+@pytest.fixture
+def scanned_pdf_bytes() -> bytes:
+    """A PDF whose page carries no text layer -> must take the OCR path."""
+    pdf = FPDF()
+    pdf.add_page()
+    return bytes(pdf.output())
+
+
+class StubOllama:
+    """Records md_convert's Ollama calls so ingestion stays offline."""
+
+    def __init__(self) -> None:
+        self.rewritten: list[str] = []
+        self.ocr_prompts: list[str] = []
+        self.unloaded: list[str] = []
+
+    def rewrite(self, model_id, prompt, host=None):
+        self.rewritten.append(prompt)
+        return "# Rewritten\n\nrevenue of 4.2 million dollars"
+
+    def ocr(self, model_id, prompt, image_b64, host=None):
+        self.ocr_prompts.append(prompt)
+        return "# Scanned\n\nrevenue of 4.2 million dollars"
+
+    def unload(self, model_id, host=None):
+        self.unloaded.append(model_id)
+
+
+@pytest.fixture
+def stub_ollama(monkeypatch) -> StubOllama:
+    from src import ollama_client
+
+    stub = StubOllama()
+    for name in ("rewrite", "ocr", "unload"):
+        monkeypatch.setattr(ollama_client, name, getattr(stub, name))
+    return stub
+
+
 class FakeLLM:
     """Minimal stand-in for ChatOllama: echoes a canned response."""
 

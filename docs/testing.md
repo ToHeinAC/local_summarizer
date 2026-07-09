@@ -1,21 +1,38 @@
 # Testing
 
-Run: `uv run pytest`. Tests are fully offline — the LLM is monkeypatched, so no
-Ollama server is required. 46 tests total (well under the 200 cap).
+Run: `uv run pytest`. Tests are fully offline — both the summarizer LLM and the
+conversion/OCR calls are monkeypatched, so no Ollama server is required.
+71 tests total (well under the 200 cap).
 
 | File | Covers |
 |---|---|
-| `test_config.py` | defaults + env overrides |
-| `test_prompts.py` | prompt constants and their `{}` slots |
-| `test_extract.py` | pdf/docx/txt/md extraction, unsupported/no extension, stripping |
+| `test_config.py` | defaults + env overrides, incl. `OCR_MODEL`/`REWRITE_MODEL`/`PDF_DPI` |
+| `test_prompts.py` | prompt constants and their `{}` slots, OCR/rewrite prompt invariants |
+| `test_extract.py` | pdf/docx/txt/md → Markdown, rewrite vs OCR routing, unsupported/no extension, stripping |
+| `test_md_convert.py` | text-layer detection, OCR prompt selection, DOCX headings/lists/tables/order, VRAM unload, page progress |
+| `test_theme.py` | palette keys, CSS `<style>` block, font imports, icon-font guard |
 | `test_language.py` | English/German detection, fallbacks |
 | `test_models.py` | registry shape, default, availability annotation, unreachable server |
 | `test_templates.py` | registry shape, default, unknown id |
-| `test_agent.py` | chunk split, single-pass vs map-reduce, progress, language resolution, empty input |
+| `test_agent.py` | chunk split, single-pass vs map-reduce, progress monotonicity, Markdown-first ingest, language resolution, empty input |
 | `test_export.py` | md/docx/pdf output validity, unicode, exporters registry |
-| `test_app.py` | UI helpers, accepted formats, config wiring |
+| `test_app.py` | UI helpers, accepted formats, config wiring, theme availability |
 
 ## Fixtures (`conftest.py`)
-In-memory sample documents (`txt_bytes`, `md_bytes`, `docx_bytes`, `pdf_bytes`)
-and a `FakeLLM`. Edge cases covered: empty document, unsupported/no extension,
-multi-chunk map-reduce, undetectable language, unreachable Ollama, unicode PDF.
+In-memory sample documents (`txt_bytes`, `md_bytes`, `docx_bytes`, `pdf_bytes`,
+`scanned_pdf_bytes`), a `FakeLLM`, and `stub_ollama` (a `StubOllama` patching
+`ollama_client.ocr/rewrite/unload` and recording calls).
+
+`scanned_pdf_bytes` is a PDF page with **no text layer**, so it exercises the
+OCR branch of the per-page router; `pdf_bytes` has one and exercises the rewrite
+branch.
+
+Edge cases covered: empty document, unsupported/no extension, multi-chunk
+map-reduce, undetectable language, unreachable Ollama, unicode PDF, a page whose
+text layer is below `TEXT_THRESHOLD` (page numbers only), progress running
+backwards, and OCR-model eviction only when OCR actually ran.
+
+## What the tests do not cover
+The stubs assert *which* model each page is routed to, not OCR quality. Both
+paths were verified manually against a live Ollama (`deepseek-ocr:3b` on a
+rasterized scan, `gemma4:e2b` on a digital page).

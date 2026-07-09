@@ -6,14 +6,17 @@ language-aware summary from a local Ollama LLM, and download it as `.md`,
 
 ## Features
 - Upload **PDF, DOCX, TXT, MD**.
+- Every document is **converted to Markdown first**. Scanned PDF pages (no text
+  layer) are **OCR'd locally** by an Ollama vision model — no tesseract, no
+  system binaries.
 - Pick **summary language** (auto-detect by default), **template**, and **model**.
-- Live **progress bar** during summarization.
+- Live **progress bar**, per page during conversion.
 - Download the summary as **Markdown, PDF, or DOCX**.
 - Safe in-app **exit button**.
 
 ## Requirements
 - Python ≥ 3.12, [`uv`](https://docs.astral.sh/uv/), and [Ollama](https://ollama.com).
-- Pull at least the default model:
+- Pull at least the default summarization model:
   ```bash
   ollama pull gemma4:e4b        # standard (default)
   ollama pull gemma4:e2b        # fast
@@ -21,6 +24,14 @@ language-aware summary from a local Ollama LLM, and download it as `.md`,
   ollama pull gpt-oss:20b       # accurate
   ```
   The UI greys out and warns about any model that is not installed.
+- To summarize **PDFs**, also pull the OCR model:
+  ```bash
+  ollama pull deepseek-ocr:3b   # reads scanned pages
+  ```
+
+> **Note:** PDF pages that *do* have a text layer are reformatted as Markdown by
+> one LLM call per page (`REWRITE_MODEL`, default `gemma4:e4b`). For long PDFs
+> set `REWRITE_MODEL=gemma4:e2b` to keep it fast.
 
 ## Setup & run
 ```bash

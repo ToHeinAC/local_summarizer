@@ -1,14 +1,18 @@
-"""Extract plain text from uploaded files. Plain python, no LangChain.
+"""Turn uploaded files into Markdown. Plain python, no LangChain.
 
-Supported: .pdf, .docx, .txt, .md
+Every supported format becomes Markdown before summarization:
+
+- ``.md`` / ``.txt`` are already text and pass through unchanged.
+- ``.docx`` is mapped deterministically (headings, lists, tables).
+- ``.pdf`` is routed per page — text pages are LLM-rewritten, scanned pages OCR'd.
+
+See :mod:`src.md_convert` for the PDF/DOCX conversion itself.
 """
 
 from __future__ import annotations
 
-import io
-
-from docx import Document
-from pypdf import PdfReader
+from src import md_convert
+from src.md_convert import ProgressCb
 
 SUPPORTED_EXTENSIONS = (".pdf", ".docx", ".txt", ".md")
 
@@ -22,32 +26,29 @@ def _extension(filename: str) -> str:
     return filename[dot:].lower() if dot != -1 else ""
 
 
-def _extract_pdf(data: bytes) -> str:
-    reader = PdfReader(io.BytesIO(data))
-    return "\n".join(page.extract_text() or "" for page in reader.pages)
-
-
-def _extract_docx(data: bytes) -> str:
-    document = Document(io.BytesIO(data))
-    return "\n".join(p.text for p in document.paragraphs)
-
-
-def _extract_text(data: bytes) -> str:
-    return data.decode("utf-8", errors="replace")
-
-
-def extract_text(filename: str, data: bytes) -> str:
-    """Return the plain text of ``data`` based on ``filename``'s extension.
+def to_markdown(
+    filename: str,
+    data: bytes,
+    *,
+    ocr_model: str = "deepseek-ocr:3b",
+    rewrite_model: str = "gemma4:e4b",
+    dpi: int = 150,
+    host: str | None = None,
+    on_progress: ProgressCb | None = None,
+) -> str:
+    """Return the Markdown of ``data`` based on ``filename``'s extension.
 
     Raises UnsupportedFileError for unknown extensions.
     """
     ext = _extension(filename)
     if ext == ".pdf":
-        text = _extract_pdf(data)
+        text = md_convert.pdf_to_markdown(
+            data, ocr_model, rewrite_model, dpi, host, on_progress
+        )
     elif ext == ".docx":
-        text = _extract_docx(data)
+        text = md_convert.docx_to_markdown(data)
     elif ext in (".txt", ".md"):
-        text = _extract_text(data)
+        text = data.decode("utf-8", errors="replace")
     else:
         raise UnsupportedFileError(
             f"Unsupported file type '{ext or filename}'. "

@@ -59,6 +59,26 @@ def test_progress_reaches_completion(recorder):
     assert fractions[-1] == 1.0
 
 
+def test_progress_never_decreases_through_pdf_conversion(recorder, pdf_bytes, stub_ollama):
+    events: list[float] = []
+    agent.run(
+        filename="report.pdf",
+        data=pdf_bytes,
+        template_id="standard",
+        model_id="fast",
+        on_progress=lambda frac, label: events.append(frac),
+    )
+    assert events == sorted(events), f"progress bar ran backwards: {events}"
+    assert events[-1] == 1.0
+
+
+def test_pdf_is_converted_to_markdown_before_summarizing(recorder, pdf_bytes, stub_ollama):
+    agent.run(filename="report.pdf", data=pdf_bytes, template_id="standard", model_id="fast")
+    assert stub_ollama.rewritten, "the PDF must be converted to Markdown first"
+    # The finalize prompt receives the converted Markdown, not the raw text layer.
+    assert "# Rewritten" in recorder[-1]
+
+
 def test_explicit_target_language_in_finalize_prompt(recorder):
     agent.run(text="A short document.", template_id="standard", model_id="fast", target_language="de")
     assert "German" in recorder[-1]
