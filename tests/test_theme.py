@@ -29,6 +29,14 @@ def test_css_leaves_material_icon_font_alone():
     assert "[data-testid=\"stIconMaterial\"]" in theme.build_css()
 
 
+def test_progress_bar_colors_the_fill_not_the_track():
+    # Streamlit renders progressbar > stProgressBarTrack > fill. Painting the
+    # track with `primary` makes the bar look 100% full at every value.
+    css = theme.build_css()
+    assert '[data-testid="stProgressBarTrack"] > div' in css
+    assert 'div[role="progressbar"] > div {' not in css
+
+
 def test_custom_palette_is_used():
     css = theme.build_css({**theme.FOREST, "primary": "#ff0000"})
     assert "#ff0000" in css

@@ -137,7 +137,8 @@ def build_css(t: dict = FOREST) -> str:
     }}
 
     .stSpinner > div {{ border-top-color: {t['primary']} !important; }}
-    [data-testid="stProgress"] div[role="progressbar"] > div {{
+    [data-testid="stProgressBarTrack"] {{ background-color: {t['border']} !important; }}
+    [data-testid="stProgressBarTrack"] > div {{
         background-color: {t['primary']} !important;
     }}
 

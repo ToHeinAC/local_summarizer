@@ -30,6 +30,15 @@ the shell from the TOML before Python runs, so both must be kept in sync.
   paint needs network access. Everything else runs offline; without it the
   fallbacks (`system-ui`, `Georgia`) apply.
 
+## Gotcha: progress bar track vs. fill
+Streamlit renders `div[role="progressbar"] > div[data-testid="stProgressBarTrack"]
+> div`, where the inner div is the **fill** — it is `width: 100%` and reveals
+progress via `transform: translateX(value - 100%)`. Colouring the *track*
+(`div[role="progressbar"] > div`) with `primary` therefore paints the whole bar
+green and it looks 100% full at every value. Style
+`[data-testid="stProgressBarTrack"] > div` for the fill and the track itself for
+the groove.
+
 ## Gotcha: Material icon ligatures
 The CSS sets `color` on `.stApp *` but deliberately **does not** set
 `font-family` there. A global `font-family` overrides Streamlit's Material icon
