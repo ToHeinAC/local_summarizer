@@ -46,14 +46,32 @@ font, and the icons then render as literal text ("keyboard_arrow_down") instead
 of glyphs. The icon font is re-asserted explicitly for
 `[data-testid="stIconMaterial"]` and friends.
 
+## Two-tab workflow
+The main area is `st.tabs(["1 · Convert", "2 · Summarize"])`:
+
+1. **Convert** — upload a PDF/DOCX/TXT/MD, press **Convert to Markdown**. The UI
+   calls `extract.to_markdown()` directly (plain Python, no agent) and stores the
+   result in `st.session_state["markdown"]` plus the filename `["stem"]`. The
+   Markdown is previewed in a scrolling bordered container and downloadable as
+   `.md`. A fresh conversion clears any stale `["summary"]`.
+2. **Summarize** — a radio picks the source: `SOURCE_STEP1` (step 1's Markdown,
+   the default once it exists) or `SOURCE_UPLOAD` (a `.md` upload — **only** `.md`
+   is accepted here). Language and template are chosen in a 2-column row, then
+   **Summarize** calls `agent.run(text=...)`. No re-conversion happens, so no
+   OCR/rewrite arguments are passed.
+
+Session keys `markdown` / `stem` are the only handoff between the tabs.
+
 ## Layout conventions
 - `layout="wide"`, sidebar `expanded`.
-- Sidebar title `## 📝 Summarizer`, then `---` dividers.
-- Section labels are ALL-CAPS `st.caption()` (LANGUAGE / TEMPLATE / MODEL) above
+- Sidebar title `## 📝 Summarizer`, then `---` dividers. The sidebar holds
+  **only** the model selector and the exit button; language and template live in
+  tab 2, next to the work they affect.
+- Section labels are ALL-CAPS `st.caption()` (MODEL / LANGUAGE / TEMPLATE) above
   `label_visibility="collapsed"` selectboxes.
-- **Summarize** is `type="primary"` (filled green). Downloads are
-  `use_container_width=True` in a 3-column row.
-- The summary renders inside `st.container(border=True)`.
+- **Convert to Markdown** and **Summarize** are `type="primary"` (filled green).
+  Summary downloads are `use_container_width=True` in a 3-column row.
+- Markdown and summary render inside `st.container(border=True)`.
 - The exit button uses `key="exit_btn"`, which the CSS targets via
   `.st-key-exit_btn` to give it a boxed style instead of the transparent
   sidebar-nav look. It SIGTERMs the app's own PID only.

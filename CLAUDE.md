@@ -10,7 +10,7 @@ Local, offline document summarizer: Streamlit UI → Markdown conversion (vision
 ```bash
 uv sync
 uv run streamlit run src/app.py --server.port 8506   # port per PRD.md
-uv run pytest                                        # 71 tests, fully offline
+uv run pytest                                        # 83 tests, fully offline
 ```
 
 **Hard boundary:** LangChain/LangGraph may be imported *only* by `src/agent.py` and `src/tools.py`. Every other module is plain Python — `src/ollama_client.py` reaches Ollama through the plain `ollama` package, which is fine. All prompt strings are named constants in `src/prompts.py`.

@@ -5,14 +5,19 @@ language-aware summary from a local Ollama LLM, and download it as `.md`,
 `.pdf`, or `.docx`. No cloud APIs, no embeddings, no vector DB.
 
 ## Features
-- Upload **PDF, DOCX, TXT, MD**.
-- Every document is **converted to Markdown first**. Scanned PDF pages (no text
-  layer) are **OCR'd locally** by an Ollama vision model — no tesseract, no
-  system binaries.
-- Pick **summary language** (auto-detect by default), **template**, and **model**.
-- Live **progress bar**, per page during conversion.
-- Download the summary as **Markdown, PDF, or DOCX**.
-- Safe in-app **exit button**.
+Two steps, one tab each:
+
+**1 · Convert** — upload **PDF, DOCX, TXT, MD**. The document is **converted to
+Markdown first**; scanned PDF pages (no text layer) are **OCR'd locally** by an
+Ollama vision model — no tesseract, no system binaries. Review the Markdown and
+download it as `.md`.
+
+**2 · Summarize** — summarize step 1's Markdown, or upload your own `.md`
+(e.g. a corrected version). Pick **summary language** (auto-detect by default)
+and **template**, then download the summary as **Markdown, PDF, or DOCX**.
+
+Also: **model** picker in the sidebar, live **progress bar** (per page during
+conversion), and a safe in-app **exit button**.
 
 ## Requirements
 - Python ≥ 3.12, [`uv`](https://docs.astral.sh/uv/), and [Ollama](https://ollama.com).

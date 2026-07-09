@@ -5,7 +5,7 @@ detail lives in [docs/](docs/). See [PRD.md](PRD.md) for goals and
 [AGENTS.md](AGENTS.md) for collaboration rules.
 
 ## Status
-All planned features implemented and tested (71 tests passing). End-to-end
+All planned features implemented and tested (83 tests passing). End-to-end
 verified against a live Ollama server, including OCR of a scanned PDF.
 
 ## Architecture (one screen)
@@ -14,13 +14,13 @@ Layered. LangChain/LangGraph are confined to the **agent layer**
 `ollama_client.py` uses the plain `ollama` package, not LangChain.
 
 ```
-app.py ─ Streamlit UI, progress, downloads, exit   (no LangChain)
+app.py ─ Streamlit UI: 2 tabs, progress, downloads, exit  (no LangChain)
   ├─ theme.py       Forest palette + injected CSS
-  └─ agent.run() ─ LangGraph: ingest→chunk→map→reduce→finalize
+  ├─ TAB 1 ─ extract.py       file bytes → Markdown  (→ download .md)
+  │            └─ md_convert.py  PDF per-page rewrite/OCR, DOCX→MD
+  │                 └─ ollama_client.py  vision OCR + text rewrite
+  └─ TAB 2 ─ agent.run() ─ LangGraph: ingest→chunk→map→reduce→finalize
        ├─ tools.py         ChatOllama wrapper        (LangChain OK)
-       ├─ extract.py       file bytes → Markdown
-       │    └─ md_convert.py  PDF per-page rewrite/OCR, DOCX→MD
-       │         └─ ollama_client.py  vision OCR + text rewrite
        ├─ language.py      detect source language
        ├─ templates.py     template registry
        ├─ models.py        model registry + availability
@@ -29,19 +29,26 @@ app.py ─ Streamlit UI, progress, downloads, exit   (no LangChain)
        └─ config.py        dotenv config
 ```
 
-Data flow: `app.py` collects sidebar options + uploaded file → `agent.run()`
-**converts the file to Markdown** (per-page: digital text is LLM-rewritten,
-scanned pages are OCR'd by a vision model), detects language, chunks,
-map-reduces via the selected Ollama model, and finalizes with the chosen
-template/language → `export.py` produces download bytes. Progress is pushed
-through an `on_progress(fraction, label)` callback so Streamlit stays out of the
-agent layer. Details: [docs/architecture.md](docs/architecture.md),
-[docs/agent.md](docs/agent.md), [docs/ingestion.md](docs/ingestion.md).
+Data flow, two explicit steps:
+
+1. **Convert (tab 1)** — the uploaded file goes to `extract.to_markdown()`
+   (per-page: digital PDF text is LLM-rewritten, scanned pages are OCR'd by a
+   vision model). The Markdown is shown, downloadable as `.md`, and kept in
+   `st.session_state["markdown"]`.
+2. **Summarize (tab 2)** — that Markdown (default) or a user-uploaded `.md`,
+   plus the language and template chosen there, goes to `agent.run(text=...)`,
+   which detects language, chunks, map-reduces via the selected Ollama model,
+   and finalizes → `export.py` produces download bytes.
+
+Each step has its own progress callback, so Streamlit stays out of the agent and
+ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
+[docs/agent.md](docs/agent.md), [docs/ingestion.md](docs/ingestion.md),
+[docs/ui.md](docs/ui.md).
 
 ## Module map
 | Module | Role | Docs |
 |---|---|---|
-| `src/app.py` | Streamlit UI: sidebar, upload, progress, downloads, exit | [ui](docs/ui.md) |
+| `src/app.py` | Streamlit UI: convert tab, summarize tab, sidebar, exit | [ui](docs/ui.md) |
 | `src/theme.py` | Forest palette + injectable CSS | [ui](docs/ui.md) |
 | `src/agent.py` | LangGraph map-reduce summarizer + `run()` entry point | [agent](docs/agent.md) |
 | `src/tools.py` | `ChatOllama` factory + prompt runner | [agent](docs/agent.md) |
@@ -56,6 +63,10 @@ agent layer. Details: [docs/architecture.md](docs/architecture.md),
 | `src/config.py` | dotenv-backed config | — |
 
 ## Key decisions
+- **Two-step UI**: conversion and summarization are separate tabs. The user can
+  inspect and download the intermediate Markdown, fix it, and feed a corrected
+  `.md` back into step 2 — conversion is the expensive, error-prone half, so it
+  is worth making it a visible artifact rather than a hidden stage.
 - **Markdown-first ingestion**: every upload becomes Markdown before
   summarization. PDF pages are routed per page — a text layer ≥ 40 chars is
   LLM-rewritten (wording preserved); anything less is rasterized and OCR'd by a
@@ -75,7 +86,8 @@ agent layer. Details: [docs/architecture.md](docs/architecture.md),
   Uninstalled models are flagged in the UI. See [docs/models.md](docs/models.md).
 - **PDF export**: `fpdf2` (pure Python). Uses a system DejaVu Unicode font when
   present, else Helvetica with latin-1 fallback. See [docs/export.md](docs/export.md).
-- **Formats in**: PDF, DOCX, TXT, MD. **Formats out**: MD, PDF, DOCX.
+- **Formats in**: PDF, DOCX, TXT, MD (step 1); MD only (step 2's own upload).
+  **Formats out**: MD (step 1), MD/PDF/DOCX (step 2).
 - **Chunking**: character-bounded (6000/200 overlap); single-chunk documents
   skip the map/reduce passes. See [docs/agent.md](docs/agent.md).
 
