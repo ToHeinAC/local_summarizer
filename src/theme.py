@@ -91,6 +91,11 @@ def build_css(t: dict = FOREST) -> str:
         color: #ffffff !important;
         border-color: {t['primary']} !important;
     }}
+    /* The label lives in a nested <p>, which `.stApp *` would paint dark. */
+    .stButton > button[kind="primary"] *,
+    .stButton > button[kind="primary"]:hover * {{
+        color: #ffffff !important;
+    }}
     .stDownloadButton > button {{
         background-color: {t['widget_bg']} !important;
         color: {t['text']} !important;

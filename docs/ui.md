@@ -46,6 +46,14 @@ font, and the icons then render as literal text ("keyboard_arrow_down") instead
 of glyphs. The icon font is re-asserted explicitly for
 `[data-testid="stIconMaterial"]` and friends.
 
+## Gotcha: primary button labels
+`.stApp *` sets `color` on every element, and a button's label is a nested `<p>`,
+not the `<button>` itself. Setting `color: #fff` on
+`.stButton > button[kind="primary"]` alone leaves the label dark — the `<p>` is
+matched directly by `.stApp *`, which beats inheriting from its parent. The
+white must be re-asserted on the descendants
+(`... button[kind="primary"] *`).
+
 ## Two-tab workflow
 The main area is `st.tabs(["1 · Convert", "2 · Summarize"])`:
 

@@ -37,6 +37,13 @@ def test_progress_bar_colors_the_fill_not_the_track():
     assert 'div[role="progressbar"] > div {' not in css
 
 
+def test_primary_button_label_is_white():
+    # `.stApp *` paints the button's inner <p> label, so the white color must be
+    # set on the descendants too, not only on the <button> itself.
+    css = theme.build_css()
+    assert '.stButton > button[kind="primary"] *' in css
+
+
 def test_custom_palette_is_used():
     css = theme.build_css({**theme.FOREST, "primary": "#ff0000"})
     assert "#ff0000" in css
