@@ -6,4 +6,4 @@ textColor                = "#1a1f1c"
 font                     = "sans serif"
 
 [server]
-port = 8506
+port = 8530

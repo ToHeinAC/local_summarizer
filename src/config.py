@@ -26,7 +26,7 @@ def load_config() -> Config:
     """Read config from the environment, applying sensible defaults."""
     return Config(
         ollama_host=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
-        app_port=int(os.getenv("APP_PORT", "8506")),
+        app_port=int(os.getenv("APP_PORT", "8530")),
         default_model=os.getenv("DEFAULT_MODEL", "standard"),
         default_template=os.getenv("DEFAULT_TEMPLATE", "standard"),
         default_language=os.getenv("DEFAULT_LANGUAGE", "auto"),

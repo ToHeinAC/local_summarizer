@@ -6,7 +6,7 @@ Two-step workflow, one tab each:
 2. Summarize — reuse step 1's Markdown (default) or upload your own ``.md``,
    choose language and template, summarize, download the result.
 
-Run: uv run streamlit run src/app.py --server.port 8506
+Run: uv run streamlit run src/app.py --server.port 8530
 """
 
 from __future__ import annotations

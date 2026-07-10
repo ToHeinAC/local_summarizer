@@ -35,7 +35,7 @@ def test_accepted_formats():
 
 
 def test_config_loaded():
-    assert app.CFG.app_port == 8506
+    assert app.CFG.app_port == 8530
 
 
 def test_theme_css_available_to_ui():

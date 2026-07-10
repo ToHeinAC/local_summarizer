@@ -8,7 +8,7 @@ def test_defaults(monkeypatch):
 
     importlib.reload(config)
     cfg = config.load_config()
-    assert cfg.app_port == 8506
+    assert cfg.app_port == 8530
     assert cfg.default_model == "standard"
     assert cfg.default_language == "auto"
     assert cfg.ocr_model == "deepseek-ocr:3b"

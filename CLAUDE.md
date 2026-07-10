@@ -9,7 +9,7 @@ Local, offline document summarizer: Streamlit UI → Markdown conversion (vision
 
 ```bash
 uv sync
-uv run streamlit run src/app.py --server.port 8506   # port per PRD.md
+uv run streamlit run src/app.py --server.port 8530   # port per PRD.md
 uv run pytest                                        # 83 tests, fully offline
 ```
 

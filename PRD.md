@@ -24,6 +24,6 @@
 - LangChain/LangGraph are permitted **only** inside the agent layer (e.g. `src/agent.py`, `src/tools.py`). Everywhere else: no LangChain, no vector DB, no embeddings, no cloud LLM APIs.
 - `uv` is used for the virtual python environment setup and the running. Dependencies shall be defined in `pyproject.toml` and installed via `uv`.
 - Use python-dotenv for the environmental variable handling.
-- All domain Python modules live in `src/`. Run with `uv run streamlit run src/app.py --server.port 8506`.
-  - Port **8506** is the project's chosen Streamlit port (avoids the default 8501 and a collision with another local app on 8520). Configurable via `APP_PORT` in `.env`.
+- All domain Python modules live in `src/`. Run with `uv run streamlit run src/app.py --server.port 8530`.
+  - Port **8530** is the project's chosen Streamlit port (avoids the default 8501 and a collision with another local app on 8520). Configurable via `APP_PORT` in `.env`.
 - All LLM prompt strings must live in `src/prompts.py` as named module-level constants (e.g. `INGEST_PROMPT`). Never embed prompt strings inline in other modules.
