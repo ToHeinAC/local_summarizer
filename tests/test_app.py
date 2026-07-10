@@ -41,30 +41,30 @@ def at(anon):
 def _sign_in(anon, username, password):
     anon.text_input[0].set_value(username)
     anon.text_input[1].set_value(password)
-    return next(b for b in anon.button if b.label == "Sign in").click().run()
+    return next(b for b in anon.button if b.label == "Anmelden").click().run()
 
 
 def test_signed_out_app_shows_only_the_login_form(anon):
     assert not anon.tabs
-    assert [i.label for i in anon.text_input] == ["Username", "Password"]
+    assert [i.label for i in anon.text_input] == ["Benutzername", "Passwort"]
 
 
 def test_valid_credentials_sign_in(anon):
     at = _sign_in(anon, "Gast", GAST_PW)
     assert at.session_state["user"] == "Gast"
-    assert [t.label for t in at.tabs] == ["1 · Convert", "2 · Summarize"]
+    assert [t.label for t in at.tabs] == ["1 · Umwandeln", "2 · Zusammenfassen"]
 
 
 def test_invalid_credentials_are_rejected(anon):
     at = _sign_in(anon, "Gast", "wrong")
     assert "user" not in at.session_state
-    assert at.error[0].value == "Invalid username or password."
+    assert at.error[0].value == "Benutzername oder Passwort ist ungültig."
 
 
 def test_logout_clears_the_session(at):
     at.session_state["markdown"] = "# Hi"
     at.run()
-    next(b for b in at.button if b.label == "Logout").click().run()
+    next(b for b in at.button if b.label == "Abmelden").click().run()
     assert "user" not in at.session_state
     assert "markdown" not in at.session_state
     assert not at.tabs
@@ -83,24 +83,29 @@ def test_config_loaded():
     assert app.CFG.app_port == 8530
 
 
+def test_every_language_code_has_a_german_ui_label():
+    """format_func indexes LANGUAGE_UI_LABELS directly, so a gap is a KeyError."""
+    assert set(app.LANGUAGE_UI_LABELS) == set(app.LANGUAGE_LABELS)
+
+
 def test_theme_css_available_to_ui():
     assert "<style>" in app.theme.build_css()
 
 
 def test_two_tabs(at):
-    assert [t.label for t in at.tabs] == ["1 · Convert", "2 · Summarize"]
+    assert [t.label for t in at.tabs] == ["1 · Umwandeln", "2 · Zusammenfassen"]
 
 
 def test_sidebar_selects_only_a_model(at):
     """Language and template moved into the summarize tab."""
     labels = [s.label for s in at.sidebar.selectbox]
-    assert labels == ["Model"]
+    assert labels == ["Modell"]
 
 
 def test_summarize_tab_offers_language_and_template(at):
     labels = [s.label for s in at.selectbox]
-    assert "Summary language" in labels
-    assert "Template" in labels
+    assert "Sprache der Zusammenfassung" in labels
+    assert "Vorlage" in labels
 
 
 def test_summary_source_defaults_to_upload_when_step1_is_empty(at):
@@ -110,7 +115,7 @@ def test_summary_source_defaults_to_upload_when_step1_is_empty(at):
 
 def test_summary_source_hints_when_step1_is_chosen_but_empty(at):
     at.radio[0].set_value(app.SOURCE_STEP1).run()
-    assert at.info[0].value.startswith("Convert a document in step 1 first")
+    assert at.info[0].value.startswith("Wandeln Sie zuerst in Schritt 1")
 
 
 def test_summary_source_defaults_to_step1_markdown(at):
@@ -121,26 +126,26 @@ def test_summary_source_defaults_to_step1_markdown(at):
 
 
 def test_summarize_disabled_without_a_source(at):
-    button = next(b for b in at.button if b.label == "Summarize")
+    button = next(b for b in at.button if b.label == "Zusammenfassen")
     assert button.disabled
 
 
 def test_summarize_enabled_with_step1_markdown(at):
     at.session_state["markdown"] = "# Hi"
     at.run()
-    button = next(b for b in at.button if b.label == "Summarize")
+    button = next(b for b in at.button if b.label == "Zusammenfassen")
     assert not button.disabled
 
 
 def test_convert_button_disabled_without_upload(at):
-    button = next(b for b in at.button if b.label == "Convert to Markdown")
+    button = next(b for b in at.button if b.label == "In Markdown umwandeln")
     assert button.disabled
 
 
 def test_step1_offers_a_markdown_download(at):
     at.session_state["markdown"] = "# Hi"
     at.run()
-    assert any(d.label == "Download .md" for d in at.download_button)
+    assert any(d.label == ".md herunterladen" for d in at.download_button)
 
 
 def test_summarize_runs_on_markdown_without_reconverting(at, monkeypatch):
@@ -155,13 +160,13 @@ def test_summarize_runs_on_markdown_without_reconverting(at, monkeypatch):
     at.session_state["markdown"] = "# Source doc"
     at.session_state["stem"] = "report"
     at.run()
-    next(b for b in at.button if b.label == "Summarize").click().run()
+    next(b for b in at.button if b.label == "Zusammenfassen").click().run()
 
     assert calls["text"] == "# Source doc"
     assert "data" not in calls and "filename" not in calls
     assert at.session_state["summary"] == "## Overview\nDone."
     assert {d.label for d in at.download_button} >= {
-        "Download .md",
-        "Download .docx",
-        "Download .pdf",
+        ".md herunterladen",
+        ".docx herunterladen",
+        ".pdf herunterladen",
     }

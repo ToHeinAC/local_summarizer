@@ -51,7 +51,7 @@ def to_markdown(
         text = data.decode("utf-8", errors="replace")
     else:
         raise UnsupportedFileError(
-            f"Unsupported file type '{ext or filename}'. "
-            f"Supported: {', '.join(SUPPORTED_EXTENSIONS)}"
+            f"Nicht unterstützter Dateityp '{ext or filename}'. "
+            f"Unterstützt: {', '.join(SUPPORTED_EXTENSIONS)}"
         )
     return text.strip()

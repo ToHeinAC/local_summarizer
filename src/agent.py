@@ -71,7 +71,7 @@ def _ingest(state: SummaryState, config) -> dict:
     if not text:
         # Seed at 0.0: the first conversion callback also reports 0 pages done,
         # so anything higher here would make the progress bar run backwards.
-        _progress(config, 0.0, "Converting to Markdown")
+        _progress(config, 0.0, "Konvertiere zu Markdown")
 
         def on_convert(done: int, total: int, label: str) -> None:
             fraction = INGEST_SHARE * done / total if total else INGEST_SHARE
@@ -87,14 +87,14 @@ def _ingest(state: SummaryState, config) -> dict:
             on_progress=on_convert,
         )
     if not text.strip():
-        raise ValueError("No extractable text found in the document.")
-    _progress(config, INGEST_SHARE, "Read document")
+        raise ValueError("Im Dokument wurde kein extrahierbarer Text gefunden.")
+    _progress(config, INGEST_SHARE, "Dokument gelesen")
     return {"text": text, "source_language": detect_language(text)}
 
 
 def _chunk(state: SummaryState, config) -> dict:
     chunks = split_text(state["text"])
-    _progress(config, 0.42, f"Split into {len(chunks)} section(s)")
+    _progress(config, 0.42, f"In {len(chunks)} Abschnitt(e) geteilt")
     return {"chunks": chunks}
 
 
@@ -106,14 +106,14 @@ def _map(state: SummaryState, config) -> dict:
     summaries: list[str] = []
     for i, chunk in enumerate(chunks, start=1):
         summaries.append(run_prompt(llm, MAP_PROMPT.format(chunk=chunk)))
-        _progress(config, 0.42 + 0.38 * i / len(chunks), f"Summarizing section {i}/{len(chunks)}")
+        _progress(config, 0.42 + 0.38 * i / len(chunks), f"Fasse Abschnitt {i}/{len(chunks)} zusammen")
     return {"chunk_summaries": summaries}
 
 
 def _reduce(state: SummaryState, config) -> dict:
     summaries = state["chunk_summaries"]
     llm = _llm(state)
-    _progress(config, 0.85, "Combining section summaries")
+    _progress(config, 0.85, "Führe Abschnitts-Zusammenfassungen zusammen")
     while len(summaries) > 1:
         batched: list[str] = []
         for i in range(0, len(summaries), REDUCE_BATCH):
@@ -130,12 +130,12 @@ def _finalize(state: SummaryState, config) -> dict:
     language = LANGUAGE_LABELS.get(code, code)
     template = get_template(state["template_id"])["structure"]
     content = state["chunk_summaries"][0]
-    _progress(config, 0.90, "Writing final summary")
+    _progress(config, 0.90, "Schreibe finale Zusammenfassung")
     summary = run_prompt(
         _llm(state),
         FINALIZE_PROMPT.format(language=language, template=template, content=content),
     )
-    _progress(config, 1.0, "Done")
+    _progress(config, 1.0, "Fertig")
     return {"summary": summary}
 
 

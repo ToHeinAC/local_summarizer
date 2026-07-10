@@ -74,7 +74,7 @@ def test_pdf_progress_reports_every_page(pdf_bytes, stub_ollama):
         pdf_bytes, "deepseek-ocr:3b", "gemma4:e4b", 72,
         on_progress=lambda done, total, label: events.append((done, total, label)),
     )
-    assert events[0][2].startswith("Page 1/1")
+    assert events[0][2].startswith("Seite 1/1")
     assert events[-1][:2] == (1, 1)
 
 

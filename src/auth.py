@@ -67,9 +67,9 @@ def ensure_seeded() -> None:
     users = seed_passwords()
     if not users:
         raise RuntimeError(
-            "No seed passwords found. Set "
+            "Keine Start-Passwörter gefunden. Bitte "
             + " / ".join(SEED_USERS.values())
-            + " in .env (see .env.example)."
+            + " in .env setzen (siehe .env.example)."
         )
     _save({"users": {u: {"pw_hash": _hash(pw)} for u, pw in users.items()}})
 

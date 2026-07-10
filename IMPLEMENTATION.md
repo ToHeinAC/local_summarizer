@@ -5,7 +5,7 @@ detail lives in [docs/](docs/). See [PRD.md](PRD.md) for goals and
 [AGENTS.md](AGENTS.md) for collaboration rules.
 
 ## Status
-All planned features implemented and tested (98 tests passing). End-to-end
+All planned features implemented and tested (99 tests passing). End-to-end
 verified against a live Ollama server, including OCR of a scanned PDF.
 
 ## Architecture (one screen)
@@ -72,6 +72,12 @@ ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
   [KB_BS_local-wiki-he](https://github.com/ToHeinAC/KB_BS_local-wiki-he) without
   its per-database access and maintainer layers — this app has no per-user data,
   so a user is either signed in or not. Delete `data/users.json` to re-seed.
+- **German UI**: every user-facing string is German (app name
+  `app.APP_TITLE` = "KI-Zusammenfassung"), including model/template labels and
+  progress-bar text. Strings the LLM reads stay English — `prompts.py` and each
+  template's `structure` — so `app.LANGUAGE_UI_LABELS` holds the German display
+  names for the language codes while `prompts.LANGUAGE_LABELS` keeps the English
+  ones the finalize prompt needs. See [docs/ui.md](docs/ui.md).
 - **Two-step UI**: conversion and summarization are separate tabs. The user can
   inspect and download the intermediate Markdown, fix it, and feed a corrected
   `.md` back into step 2 — conversion is the expensive, error-prone half, so it

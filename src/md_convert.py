@@ -135,8 +135,8 @@ def pdf_to_markdown(
     try:
         for i, (kind, payload) in enumerate(iter_pdf_pages(data, dpi)):
             if on_progress:
-                label = "OCR" if kind == "image" else "text"
-                on_progress(i, total, f"Page {i + 1}/{total} ({label})")
+                label = "OCR" if kind == "image" else "Text"
+                on_progress(i, total, f"Seite {i + 1}/{total} ({label})")
             if kind == "text":
                 parts.append(rewrite_text(payload, rewrite_model, host))
             else:
@@ -149,5 +149,5 @@ def pdf_to_markdown(
         if used_ocr:
             ollama_client.unload(ocr_model, host)
     if on_progress:
-        on_progress(total, total, "Converted to Markdown")
+        on_progress(total, total, "In Markdown umgewandelt")
     return "\n\n".join(parts)

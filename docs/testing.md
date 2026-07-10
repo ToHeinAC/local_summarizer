@@ -2,7 +2,7 @@
 
 Run: `uv run pytest`. Tests are fully offline — the summarizer LLM, the
 conversion/OCR calls, and the model-availability query are monkeypatched, so no
-Ollama server is required. 98 tests total (well under the 200 cap).
+Ollama server is required. 99 tests total (well under the 200 cap).
 
 | File | Covers |
 |---|---|
@@ -24,10 +24,11 @@ Ollama server is required. 98 tests total (well under the 200 cap).
 The `anon` fixture stubs `models.annotate_availability` and points
 `auth.DATA_ROOT` at `tmp_path`; `at` builds on it by presetting
 `session_state["user"]`, i.e. signed in. Signed out, the app must render only the
-login form (no tabs); valid credentials sign in, invalid ones error, and Logout
-clears the session. It also asserts the tab labels, that the sidebar exposes only the model selector, that language and
+login form (no tabs); valid credentials sign in, invalid ones error, and
+**Abmelden** clears the session. Widget labels are asserted in German, and
+`LANGUAGE_UI_LABELS` is checked to cover every `LANGUAGE_LABELS` code. It also asserts the tab labels, that the sidebar exposes only the model selector, that language and
 template live in tab 2, the radio's default source, button disabled-states, and
-that clicking **Summarize** calls `agent.run(text=...)` with no file arguments —
+that clicking **Zusammenfassen** calls `agent.run(text=...)` with no file arguments —
 i.e. step 2 never re-runs conversion.
 
 ## Fixtures (`conftest.py`)

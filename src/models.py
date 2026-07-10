@@ -1,8 +1,9 @@
 """LLM registry and Ollama availability check. Plain python, no LangChain.
 
 Each model exposes an Ollama tag plus human-facing capability/perf metrics
-shown in the UI. ``installed_tags`` queries the local Ollama server so the UI
-can warn about models that are not pulled yet.
+shown in the UI; ``label`` and ``note`` are German, like the rest of the UI.
+``installed_tags`` queries the local Ollama server so the UI can warn about
+models that are not pulled yet.
 """
 
 from __future__ import annotations
@@ -16,10 +17,10 @@ MODELS: list[dict] = [
     {
         "id": "fast",
         "tag": "gemma4:e2b",
-        "label": "Fast (gemma4:e2b)",
+        "label": "Schnell (gemma4:e2b)",
         "speed": 3,
         "quality": 1,
-        "note": "Lowest latency; good for quick drafts.",
+        "note": "Geringste Latenz; gut für schnelle Entwürfe.",
     },
     {
         "id": "standard",
@@ -27,23 +28,23 @@ MODELS: list[dict] = [
         "label": "Standard (gemma4:e4b)",
         "speed": 2,
         "quality": 2,
-        "note": "Balanced default.",
+        "note": "Ausgewogene Voreinstellung.",
     },
     {
         "id": "smarter",
         "tag": "qwen3:14b",
-        "label": "Smarter (qwen3:14b)",
+        "label": "Klüger (qwen3:14b)",
         "speed": 1,
         "quality": 3,
-        "note": "Stronger reasoning; slower.",
+        "note": "Stärkere Schlussfolgerungen; langsamer.",
     },
     {
         "id": "accurate",
         "tag": "gpt-oss:20b",
-        "label": "Accurate (gpt-oss:20b)",
+        "label": "Genau (gpt-oss:20b)",
         "speed": 1,
         "quality": 3,
-        "note": "Highest fidelity; slowest.",
+        "note": "Höchste Genauigkeit; am langsamsten.",
     },
 ]
 

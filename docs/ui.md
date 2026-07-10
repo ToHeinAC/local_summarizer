@@ -54,47 +54,61 @@ matched directly by `.stApp *`, which beats inheriting from its parent. The
 white must be re-asserted on the descendants
 (`... button[kind="primary"] *`).
 
+## Language
+Every user-facing string is **German**. The app name is `app.APP_TITLE`
+("KI-Zusammenfassung") and is used for the page title, the login header, the
+sidebar header, and `st.title`. Labels shown in the UI live with the data they
+describe: `models.MODELS[*]["label"]/["note"]` and
+`templates.TEMPLATES[*]["label"]/["description"]`. Progress-bar labels come from
+`agent.py` and `md_convert.py`.
+
+Strings the **LLM** reads stay English: everything in `prompts.py` (including
+`LANGUAGE_LABELS`) and each template's `structure`. The language selectbox
+therefore renders `app.LANGUAGE_UI_LABELS`, a German display map keyed by the
+same ISO codes — a missing key would be a `KeyError` in `format_func`, which
+`test_app.py` guards.
+
 ## Sign-in gate
 `main()` calls `auth.ensure_seeded()` then `_login_gate()` before the sidebar and
 tabs. Signed out, the page is a centered `st.columns([1, 1.4, 1])` block holding
-the title, the caption *Sign in to continue*, and an `st.form("login_form")` with
-Username, a `type="password"` field, and a primary **Sign in** button; a bad
-credential pair renders `st.error`. `st.stop()` ends the script run, so nothing
+the title, the caption *Zum Fortfahren anmelden*, and an `st.form("login_form")`
+with Benutzername, a `type="password"` field, and a primary **Anmelden** button;
+a bad credential pair renders `st.error`. `st.stop()` ends the script run, so nothing
 else is ever rendered to an anonymous visitor. Same shape as the reference repo.
 
 On success the username goes into `st.session_state["user"]` and the script
-reruns. The sidebar then ends with `Signed in as **<user>**` and two equal boxed
-buttons, **Exit app** (`key="exit_btn"`) and **Logout** (`key="logout_btn"`).
-Logout calls `st.session_state.clear()`, which also drops the converted Markdown
+reruns. The sidebar then ends with `Angemeldet als **<user>**` and two equal
+boxed buttons, **App beenden** (`key="exit_btn"`) and **Abmelden**
+(`key="logout_btn"`). Abmelden calls `st.session_state.clear()`, which also drops the converted Markdown
 and the summary, so a shared machine leaks nothing to the next user. Passwords
 live as bcrypt hashes in `data/users.json`, seeded once from the `SEED_PW_*`
 variables in `.env` (see [../src/auth.py](../src/auth.py)). A missing seed raises,
 and `main()` renders that as an `st.error` instead of a traceback.
 
 ## Two-tab workflow
-The main area is `st.tabs(["1 · Convert", "2 · Summarize"])`:
+The main area is `st.tabs(["1 · Umwandeln", "2 · Zusammenfassen"])`:
 
-1. **Convert** — upload a PDF/DOCX/TXT/MD, press **Convert to Markdown**. The UI
+1. **Umwandeln** — upload a PDF/DOCX/TXT/MD, press **In Markdown umwandeln**. The UI
    calls `extract.to_markdown()` directly (plain Python, no agent) and stores the
    result in `st.session_state["markdown"]` plus the filename `["stem"]`. The
    Markdown is previewed in a scrolling bordered container and downloadable as
    `.md`. A fresh conversion clears any stale `["summary"]`.
-2. **Summarize** — a radio picks the source: `SOURCE_STEP1` (step 1's Markdown,
-   the default once it exists) or `SOURCE_UPLOAD` (a `.md` upload — **only** `.md`
-   is accepted here). Language and template are chosen in a 2-column row, then
-   **Summarize** calls `agent.run(text=...)`. No re-conversion happens, so no
+2. **Zusammenfassen** — a radio picks the source: `SOURCE_STEP1` (step 1's
+   Markdown, the default once it exists) or `SOURCE_UPLOAD` (a `.md` upload —
+   **only** `.md` is accepted here). Language and template are chosen in a
+   2-column row, then **Zusammenfassen** calls `agent.run(text=...)`. No re-conversion happens, so no
    OCR/rewrite arguments are passed.
 
 Session keys `markdown` / `stem` are the only handoff between the tabs.
 
 ## Layout conventions
 - `layout="wide"`, sidebar `expanded`.
-- Sidebar title `## 📝 Summarizer`, then `---` dividers. The sidebar holds
+- Sidebar title `## 📝 KI-Zusammenfassung`, then `---` dividers. The sidebar holds
   **only** the model selector and the exit button; language and template live in
   tab 2, next to the work they affect.
-- Section labels are ALL-CAPS `st.caption()` (MODEL / LANGUAGE / TEMPLATE) above
+- Section labels are ALL-CAPS `st.caption()` (MODELL / SPRACHE / VORLAGE) above
   `label_visibility="collapsed"` selectboxes.
-- **Convert to Markdown** and **Summarize** are `type="primary"` (filled green).
+- **In Markdown umwandeln** and **Zusammenfassen** are `type="primary"` (filled green).
   Summary downloads are `use_container_width=True` in a 3-column row.
 - Markdown and summary render inside `st.container(border=True)`.
 - The exit and logout buttons use `key="exit_btn"` / `key="logout_btn"`, which

@@ -6,16 +6,19 @@ information density.
 
 | id | label | Shape |
 |---|---|---|
-| `executive` | Executive (terse) | One 3-5 sentence paragraph, no headings |
+| `executive` | Management (knapp) | One 3-5 sentence paragraph, no headings |
 | `standard` *(default)* | Standard | `## Overview` + `## Key Points` bullets |
-| `detailed` | Detailed | Overview + per-topic `### ` subsections + conclusion |
-| `bullets` | Bullet key-points | Flat 6-20 bullet takeaways |
-| `action_items` | Action items | `## Decisions` + `## Action Items` lists |
+| `detailed` | Ausführlich | Overview + per-topic `### ` subsections + conclusion |
+| `bullets` | Stichpunkte | Flat 6-20 bullet takeaways |
+| `action_items` | Maßnahmen | `## Decisions` + `## Action Items` lists |
 
 ## API
 - `list_templates() -> list[dict]`
 - `get_template(id) -> dict` (raises `KeyError` if unknown)
 - `DEFAULT_TEMPLATE_ID = "standard"`
+
+`label` and `description` are German (UI-facing); `structure` stays English
+because it is prompt text.
 
 ## Adding a template
 Append a dict with `id`, `label`, `description`, `structure`. The UI and prompt
