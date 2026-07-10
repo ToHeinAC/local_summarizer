@@ -18,11 +18,56 @@ FAKE_MODELS = [
 ]
 
 
+GAST_PW = "gast-test-pw"
+
+
 @pytest.fixture
-def at(monkeypatch):
-    """The app, run offline: no Ollama query for model availability."""
+def anon(monkeypatch, tmp_path):
+    """The app, run offline and signed out, with an isolated user store."""
     monkeypatch.setattr("src.models.annotate_availability", lambda host: FAKE_MODELS)
+    monkeypatch.setattr("src.auth.DATA_ROOT", tmp_path)
+    monkeypatch.setenv("SEED_PW_HEIN", "hein-test-pw")
+    monkeypatch.setenv("SEED_PW_GAST", GAST_PW)
     return AppTest.from_file(APP_FILE).run()
+
+
+@pytest.fixture
+def at(anon):
+    """The app, signed in as the default user."""
+    anon.session_state["user"] = "T. Hein"
+    return anon.run()
+
+
+def _sign_in(anon, username, password):
+    anon.text_input[0].set_value(username)
+    anon.text_input[1].set_value(password)
+    return next(b for b in anon.button if b.label == "Sign in").click().run()
+
+
+def test_signed_out_app_shows_only_the_login_form(anon):
+    assert not anon.tabs
+    assert [i.label for i in anon.text_input] == ["Username", "Password"]
+
+
+def test_valid_credentials_sign_in(anon):
+    at = _sign_in(anon, "Gast", GAST_PW)
+    assert at.session_state["user"] == "Gast"
+    assert [t.label for t in at.tabs] == ["1 · Convert", "2 · Summarize"]
+
+
+def test_invalid_credentials_are_rejected(anon):
+    at = _sign_in(anon, "Gast", "wrong")
+    assert "user" not in at.session_state
+    assert at.error[0].value == "Invalid username or password."
+
+
+def test_logout_clears_the_session(at):
+    at.session_state["markdown"] = "# Hi"
+    at.run()
+    next(b for b in at.button if b.label == "Logout").click().run()
+    assert "user" not in at.session_state
+    assert "markdown" not in at.session_state
+    assert not at.tabs
 
 
 def test_stars():

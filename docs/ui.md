@@ -54,6 +54,23 @@ matched directly by `.stApp *`, which beats inheriting from its parent. The
 white must be re-asserted on the descendants
 (`... button[kind="primary"] *`).
 
+## Sign-in gate
+`main()` calls `auth.ensure_seeded()` then `_login_gate()` before the sidebar and
+tabs. Signed out, the page is a centered `st.columns([1, 1.4, 1])` block holding
+the title, the caption *Sign in to continue*, and an `st.form("login_form")` with
+Username, a `type="password"` field, and a primary **Sign in** button; a bad
+credential pair renders `st.error`. `st.stop()` ends the script run, so nothing
+else is ever rendered to an anonymous visitor. Same shape as the reference repo.
+
+On success the username goes into `st.session_state["user"]` and the script
+reruns. The sidebar then ends with `Signed in as **<user>**` and two equal boxed
+buttons, **Exit app** (`key="exit_btn"`) and **Logout** (`key="logout_btn"`).
+Logout calls `st.session_state.clear()`, which also drops the converted Markdown
+and the summary, so a shared machine leaks nothing to the next user. Passwords
+live as bcrypt hashes in `data/users.json`, seeded once from the `SEED_PW_*`
+variables in `.env` (see [../src/auth.py](../src/auth.py)). A missing seed raises,
+and `main()` renders that as an `st.error` instead of a traceback.
+
 ## Two-tab workflow
 The main area is `st.tabs(["1 · Convert", "2 · Summarize"])`:
 
@@ -80,6 +97,7 @@ Session keys `markdown` / `stem` are the only handoff between the tabs.
 - **Convert to Markdown** and **Summarize** are `type="primary"` (filled green).
   Summary downloads are `use_container_width=True` in a 3-column row.
 - Markdown and summary render inside `st.container(border=True)`.
-- The exit button uses `key="exit_btn"`, which the CSS targets via
-  `.st-key-exit_btn` to give it a boxed style instead of the transparent
-  sidebar-nav look. It SIGTERMs the app's own PID only.
+- The exit and logout buttons use `key="exit_btn"` / `key="logout_btn"`, which
+  the CSS targets via `.st-key-exit_btn` / `.st-key-logout_btn` to give them a
+  boxed style instead of the transparent sidebar-nav look. Exit SIGTERMs the
+  app's own PID only.

@@ -2,7 +2,7 @@
 
 Run: `uv run pytest`. Tests are fully offline — the summarizer LLM, the
 conversion/OCR calls, and the model-availability query are monkeypatched, so no
-Ollama server is required. 83 tests total (well under the 200 cap).
+Ollama server is required. 98 tests total (well under the 200 cap).
 
 | File | Covers |
 |---|---|
@@ -16,12 +16,16 @@ Ollama server is required. 83 tests total (well under the 200 cap).
 | `test_templates.py` | registry shape, default, unknown id |
 | `test_agent.py` | chunk split, single-pass vs map-reduce, progress monotonicity, Markdown-first ingest, language resolution, empty input |
 | `test_export.py` | md/docx/pdf output validity, unicode, exporters registry |
+| `test_auth.py` | env-seeded store, hashed (never plaintext) storage, wrong password, unknown user, missing seed, corrupt/missing store |
 | `test_app.py` | UI helpers, accepted formats, config wiring, theme availability, and the two-tab workflow driven through `AppTest` |
 
 ## UI tests
-`test_app.py` runs the real Streamlit script via `streamlit.testing.v1.AppTest`
-(the `at` fixture, which stubs `models.annotate_availability`). It asserts the
-tab labels, that the sidebar exposes only the model selector, that language and
+`test_app.py` runs the real Streamlit script via `streamlit.testing.v1.AppTest`.
+The `anon` fixture stubs `models.annotate_availability` and points
+`auth.DATA_ROOT` at `tmp_path`; `at` builds on it by presetting
+`session_state["user"]`, i.e. signed in. Signed out, the app must render only the
+login form (no tabs); valid credentials sign in, invalid ones error, and Logout
+clears the session. It also asserts the tab labels, that the sidebar exposes only the model selector, that language and
 template live in tab 2, the radio's default source, button disabled-states, and
 that clicking **Summarize** calls `agent.run(text=...)` with no file arguments —
 i.e. step 2 never re-runs conversion.

@@ -1,6 +1,6 @@
 """Streamlit UI for the local summarizer. No LangChain in this module.
 
-Two-step workflow, one tab each:
+Sign-in is required; the two-step workflow follows, one tab each:
 
 1. Convert — upload a document, turn it into Markdown, download the ``.md``.
 2. Summarize — reuse step 1's Markdown (default) or upload your own ``.md``,
@@ -16,7 +16,7 @@ import signal
 
 import streamlit as st
 
-from src import agent, export, extract, theme
+from src import agent, auth, export, extract, theme
 from src.config import load_config
 from src.models import DEFAULT_MODEL_ID, annotate_availability
 from src.prompts import LANGUAGE_LABELS
@@ -30,6 +30,30 @@ SOURCE_UPLOAD = "Upload a .md file"
 
 def _stars(n: int) -> str:
     return "★" * n + "☆" * (3 - n)
+
+
+def _login_gate() -> None:
+    """Show the sign-in form and stop the script until a user is signed in."""
+    if st.session_state.get("user"):
+        return
+
+    _left, mid, _right = st.columns([1, 1.4, 1])
+    with mid:
+        st.markdown("## 📝 Summarizer")
+        st.caption("Sign in to continue")
+        with st.form("login_form"):
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            submitted = st.form_submit_button(
+                "Sign in", type="primary", use_container_width=True
+            )
+        if submitted:
+            if auth.verify(username, password):
+                st.session_state["user"] = username
+                st.rerun()
+            else:
+                st.error("Invalid username or password.")
+    st.stop()
 
 
 def _sidebar() -> dict:
@@ -53,9 +77,14 @@ def _sidebar() -> dict:
         st.sidebar.warning(f"`{model['tag']}` is not installed. Run: `ollama pull {model['tag']}`")
 
     st.sidebar.markdown("---")
-    if st.sidebar.button("Exit app", key="exit_btn", use_container_width=True):
+    st.sidebar.caption(f"Signed in as **{st.session_state['user']}**")
+    exit_col, logout_col = st.sidebar.columns(2)
+    if exit_col.button("Exit app", key="exit_btn"):
         st.sidebar.info("Shutting down…")
         os.kill(os.getpid(), signal.SIGTERM)
+    if logout_col.button("Logout", key="logout_btn"):
+        st.session_state.clear()  # drop the signed-in user and their documents
+        st.rerun()
 
     return {"model": model}
 
@@ -227,6 +256,12 @@ def main() -> None:
         initial_sidebar_state="expanded",
     )
     st.markdown(theme.build_css(), unsafe_allow_html=True)
+    try:
+        auth.ensure_seeded()
+    except RuntimeError as exc:  # no seed passwords configured
+        st.error(str(exc))
+        st.stop()
+    _login_gate()
     opts = _sidebar()
 
     st.title("Document Summarizer")

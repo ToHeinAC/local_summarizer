@@ -119,15 +119,18 @@ def build_css(t: dict = FOREST) -> str:
         border: 1px solid {t['border']} !important;
     }}
 
-    /* Sidebar exit button: boxed, centered (not the transparent nav style) */
-    [data-testid="stSidebar"] .st-key-exit_btn button {{
+    /* Sidebar exit/logout: identical boxed buttons (not the transparent nav style) */
+    [data-testid="stSidebar"] .st-key-exit_btn button,
+    [data-testid="stSidebar"] .st-key-logout_btn button {{
         background-color: {t['widget_bg']} !important;
         border: 1px solid {t['border']} !important;
         text-align: center !important;
         padding: 0.35rem 0.75rem !important;
         border-radius: 6px !important;
+        width: 100% !important;
     }}
-    [data-testid="stSidebar"] .st-key-exit_btn button:hover {{
+    [data-testid="stSidebar"] .st-key-exit_btn button:hover,
+    [data-testid="stSidebar"] .st-key-logout_btn button:hover {{
         background-color: {t['hover']} !important;
         border-color: {t['primary']} !important;
     }}

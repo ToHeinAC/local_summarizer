@@ -5,7 +5,7 @@ detail lives in [docs/](docs/). See [PRD.md](PRD.md) for goals and
 [AGENTS.md](AGENTS.md) for collaboration rules.
 
 ## Status
-All planned features implemented and tested (83 tests passing). End-to-end
+All planned features implemented and tested (98 tests passing). End-to-end
 verified against a live Ollama server, including OCR of a scanned PDF.
 
 ## Architecture (one screen)
@@ -14,7 +14,8 @@ Layered. LangChain/LangGraph are confined to the **agent layer**
 `ollama_client.py` uses the plain `ollama` package, not LangChain.
 
 ```
-app.py ─ Streamlit UI: 2 tabs, progress, downloads, exit  (no LangChain)
+app.py ─ Streamlit UI: login gate, 2 tabs, progress, downloads, exit  (no LangChain)
+  ├─ auth.py        bcrypt user store (data/users.json)
   ├─ theme.py       Forest palette + injected CSS
   ├─ TAB 1 ─ extract.py       file bytes → Markdown  (→ download .md)
   │            └─ md_convert.py  PDF per-page rewrite/OCR, DOCX→MD
@@ -29,7 +30,8 @@ app.py ─ Streamlit UI: 2 tabs, progress, downloads, exit  (no LangChain)
        └─ config.py        dotenv config
 ```
 
-Data flow, two explicit steps:
+Sign-in gates everything: `app.py` calls `auth.verify()` before any tab is
+rendered (see [docs/ui.md](docs/ui.md)). Data flow, two explicit steps:
 
 1. **Convert (tab 1)** — the uploaded file goes to `extract.to_markdown()`
    (per-page: digital PDF text is LLM-rewritten, scanned pages are OCR'd by a
@@ -48,7 +50,8 @@ ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
 ## Module map
 | Module | Role | Docs |
 |---|---|---|
-| `src/app.py` | Streamlit UI: convert tab, summarize tab, sidebar, exit | [ui](docs/ui.md) |
+| `src/app.py` | Streamlit UI: login gate, convert tab, summarize tab, sidebar, exit | [ui](docs/ui.md) |
+| `src/auth.py` | bcrypt user store + `verify()` | [ui](docs/ui.md) |
 | `src/theme.py` | Forest palette + injectable CSS | [ui](docs/ui.md) |
 | `src/agent.py` | LangGraph map-reduce summarizer + `run()` entry point | [agent](docs/agent.md) |
 | `src/tools.py` | `ChatOllama` factory + prompt runner | [agent](docs/agent.md) |
@@ -63,6 +66,12 @@ ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
 | `src/config.py` | dotenv-backed config | — |
 
 ## Key decisions
+- **Authentication**: a bcrypt-hashed user store in `data/users.json` (gitignored),
+  seeded on first run from the `SEED_PW_*` variables in `.env` (`auth.SEED_USERS`
+  maps each account to its variable), so no password is ever committed. Ported from
+  [KB_BS_local-wiki-he](https://github.com/ToHeinAC/KB_BS_local-wiki-he) without
+  its per-database access and maintainer layers — this app has no per-user data,
+  so a user is either signed in or not. Delete `data/users.json` to re-seed.
 - **Two-step UI**: conversion and summarization are separate tabs. The user can
   inspect and download the intermediate Markdown, fix it, and feed a corrected
   `.md` back into step 2 — conversion is the expensive, error-prone half, so it
@@ -122,5 +131,8 @@ the watchdog's own command line and it would kill itself.
 - Requires a reachable Ollama server (`OLLAMA_HOST`, default
   `http://localhost:11434`). Summarizing a PDF also needs `OCR_MODEL` pulled.
 - Port 8530 is mandated by the PRD; free it if another app holds it.
+- Sign-in protects the UI, not the data: `data/users.json` holds only password
+  hashes, but the app itself serves plain HTTP. Put it behind TLS (e.g.
+  `tunnel.sh`) before exposing it publicly.
 - The theme's webfonts load from Google Fonts on first paint; without network
   access the app still runs and falls back to `system-ui` / `Georgia`.

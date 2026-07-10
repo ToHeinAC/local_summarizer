@@ -16,8 +16,9 @@ download it as `.md`.
 (e.g. a corrected version). Pick **summary language** (auto-detect by default)
 and **template**, then download the summary as **Markdown, PDF, or DOCX**.
 
-Also: **model** picker in the sidebar, live **progress bar** (per page during
-conversion), and a safe in-app **exit button**.
+Also: **sign-in** (bcrypt-hashed local user store), **model** picker in the
+sidebar, live **progress bar** (per page during conversion), **Logout**, and a
+safe in-app **exit button**.
 
 ## Requirements
 - Python ≥ 3.12, [`uv`](https://docs.astral.sh/uv/), and [Ollama](https://ollama.com).
@@ -44,6 +45,19 @@ uv sync
 cp .env.example .env            # optional: adjust OLLAMA_HOST / defaults
 uv run streamlit run src/app.py --server.port 8530
 ```
+
+## Sign-in
+The app requires a login. Set the seed passwords in `.env` before the first run:
+
+```bash
+SEED_PW_HEIN=...        # account "T. Hein"
+SEED_PW_GAST=...        # account "Gast"
+```
+
+On first run `data/users.json` is created from them. Only bcrypt hashes are
+stored, and both `.env` and `data/` are gitignored — no credential ever reaches
+the repo. To change a password, update `.env` and delete `data/users.json` so it
+is re-seeded; to change the accounts themselves, edit `auth.SEED_USERS`.
 
 ## Remote access (Cloudflare quick tunnel)
 ```bash

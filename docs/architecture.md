@@ -9,7 +9,9 @@ That is *not* LangChain, so it stays on the plain-Python side of the boundary �
 the same way `models.py` already queries `GET /api/tags` over `urllib`.
 
 ## Layers
-1. **UI (`app.py`, `theme.py`)** — Streamlit, two tabs. Tab 1 uploads a document
+1. **UI (`app.py`, `theme.py`, `auth.py`)** — Streamlit, gated by a sign-in form
+   (`auth.verify`, bcrypt hashes in `data/users.json`); nothing renders until a
+   user is in `st.session_state["user"]`. Then two tabs. Tab 1 uploads a document
    and calls `extract.to_markdown()` to convert it, offering the `.md` as a
    download. Tab 2 takes that Markdown (or an uploaded `.md`), collects language
    and template, and calls `agent.run(text=...)`. The sidebar holds only the
@@ -59,7 +61,8 @@ objects out of both the agent and ingestion layers.
 ## Configuration
 `config.py` loads `.env` via `python-dotenv`: `OLLAMA_HOST`, `APP_PORT`, the
 default model/template/language ids, and the conversion knobs `OCR_MODEL`,
-`REWRITE_MODEL`, `PDF_DPI`.
+`REWRITE_MODEL`, `PDF_DPI`. `auth.py` loads `.env` itself for the `SEED_PW_*`
+seed passwords, which stay out of `Config` (and out of the repo).
 
 ## Theme
 Colors live in two places that must agree: `.streamlit/config.toml` (what
