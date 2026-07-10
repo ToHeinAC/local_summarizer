@@ -93,14 +93,21 @@ ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
 
 ## Run & test
 ```bash
-uv run streamlit run src/app.py --server.port 8506
+uv run streamlit run src/app.py --server.port 8530
 uv run pytest
+./tunnel.sh                     # optional: public URL via Cloudflare quick tunnel
 ```
 Test map: [docs/testing.md](docs/testing.md).
+
+`tunnel.sh` starts the app if needed, then exposes port 8530 as a temporary
+`*.trycloudflare.com` URL (no Cloudflare account; needs `cloudflared`). It moves
+any named-tunnel config aside to force quick-tunnel mode, restores it on exit,
+and shuts down once port 8530 stops listening. Ported from
+[KB_BS_local-wiki-he](https://github.com/ToHeinAC/KB_BS_local-wiki-he).
 
 ## Known constraints
 - Requires a reachable Ollama server (`OLLAMA_HOST`, default
   `http://localhost:11434`). Summarizing a PDF also needs `OCR_MODEL` pulled.
-- Port 8506 is mandated by the PRD; free it if another app holds it.
+- Port 8530 is mandated by the PRD; free it if another app holds it.
 - The theme's webfonts load from Google Fonts on first paint; without network
   access the app still runs and falls back to `system-ui` / `Georgia`.

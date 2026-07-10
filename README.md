@@ -42,8 +42,17 @@ conversion), and a safe in-app **exit button**.
 ```bash
 uv sync
 cp .env.example .env            # optional: adjust OLLAMA_HOST / defaults
-uv run streamlit run src/app.py --server.port 8506
+uv run streamlit run src/app.py --server.port 8530
 ```
+
+## Remote access (Cloudflare quick tunnel)
+```bash
+./tunnel.sh
+```
+Starts the app if it isn't running, then opens a temporary `*.trycloudflare.com`
+public URL for port 8530 — no Cloudflare account required. The tunnel stays up
+until port 8530 stops listening (or Ctrl-C). Requires
+[`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/).
 
 ## Tests
 ```bash
