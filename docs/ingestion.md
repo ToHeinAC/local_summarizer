@@ -52,7 +52,7 @@ project's LangChain boundary. Exposes `ocr()`, `rewrite()`, `unload()`, all at
 ## Cost note
 The per-page rewrite means a digital PDF costs one LLM call per page *before*
 summarization begins. This mirrors the reference repo. Set `REWRITE_MODEL` to a
-fast model (e.g. `nemotron-3-nano:4b`) for large documents.
+fast model (e.g. `qwen3.5:0.8b`) for large documents.
 
 ## Language detection (`src/language.py`)
 `detect_language(text, fallback="en") -> str` returns an ISO-639-1 code via

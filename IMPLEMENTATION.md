@@ -102,7 +102,7 @@ ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
 - **Theme**: Forest palette (green/cream), Inter + Libre Baskerville, ported
   from the same repo. Colors are duplicated in `.streamlit/config.toml` and
   `theme.FOREST` and must stay in sync. See [docs/ui.md](docs/ui.md).
-- **Models**: `nemotron-3-nano:4b` (fast), `gemma4:e4b` (standard, default),
+- **Models**: `qwen3.5:0.8b` (fast), `gemma4:e4b` (standard, default),
   `qwen3:14b` (smarter), `gpt-oss:20b` (accurate). Tags match `ollama list`.
   Uninstalled models are flagged in the UI. See [docs/models.md](docs/models.md).
 - **PDF export**: `fpdf2` (pure Python). Uses a system DejaVu Unicode font when

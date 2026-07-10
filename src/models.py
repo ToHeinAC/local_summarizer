@@ -16,8 +16,8 @@ import urllib.request
 MODELS: list[dict] = [
     {
         "id": "fast",
-        "tag": "nemotron-3-nano:4b",
-        "label": {"de": "Schnell (nemotron-3-nano:4b)", "en": "Fast (nemotron-3-nano:4b)"},
+        "tag": "qwen3.5:0.8b",
+        "label": {"de": "Schnell (qwen3.5:0.8b)", "en": "Fast (qwen3.5:0.8b)"},
         "speed": 3,
         "quality": 1,
         "note": {
