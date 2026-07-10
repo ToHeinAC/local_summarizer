@@ -5,7 +5,7 @@ installed on the local server.
 
 | id | tag | label | speed | quality |
 |---|---|---|---|---|
-| `fast` | `gemma4:e2b` | Schnell / Fast | 3 | 1 |
+| `fast` | `nemotron-3-nano:4b` | Schnell / Fast | 3 | 1 |
 | `standard` *(default)* | `gemma4:e4b` | Standard | 2 | 2 |
 | `smarter` | `qwen3:14b` | Klüger / Smarter | 1 | 3 |
 | `accurate` | `gpt-oss:20b` | Genau / Accurate | 1 | 3 |

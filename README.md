@@ -28,7 +28,7 @@ button.
 - Pull at least the default summarization model:
   ```bash
   ollama pull gemma4:e4b        # standard (default)
-  ollama pull gemma4:e2b        # fast
+  ollama pull nemotron-3-nano:4b  # fast
   ollama pull qwen3:14b         # smarter
   ollama pull gpt-oss:20b       # accurate
   ```
@@ -40,7 +40,7 @@ button.
 
 > **Note:** PDF pages that *do* have a text layer are reformatted as Markdown by
 > one LLM call per page (`REWRITE_MODEL`, default `gemma4:e4b`). For long PDFs
-> set `REWRITE_MODEL=gemma4:e2b` to keep it fast.
+> set `REWRITE_MODEL=nemotron-3-nano:4b` to keep it fast.
 
 ## Setup & run
 ```bash
