@@ -2,8 +2,9 @@
 
 Local, offline document summarizer. Upload a file, get a template-driven,
 language-aware summary from a local Ollama LLM, and download it as `.md`,
-`.pdf`, or `.docx`. No cloud APIs, no embeddings, no vector DB. **The UI is in
-German**; the summary language is chosen per run (auto-detect by default).
+`.pdf`, or `.docx`. No cloud APIs, no embeddings, no vector DB. **The UI is
+German by default and toggles to English** with one sidebar button; the summary
+language is chosen separately, per run (auto-detect by default).
 
 ## Features
 Two steps, one tab each:
@@ -17,9 +18,10 @@ download it as `.md`.
 (e.g. a corrected version). Pick **summary language** (auto-detect by default)
 and **template**, then download the summary as **Markdown, PDF, or DOCX**.
 
-Also: **sign-in** (bcrypt-hashed local user store), **model** picker in the
-sidebar, live **progress bar** (per page during conversion), **Abmelden**
-(logout), and a safe in-app **App beenden** (exit) button.
+Also: **sign-in** (bcrypt-hashed local user store), a **🌐 language toggle** and
+a **model** picker in the sidebar, live **progress bar** (per page during
+conversion), **Abmelden** (logout), and a safe in-app **App beenden** (exit)
+button.
 
 ## Requirements
 - Python ≥ 3.12, [`uv`](https://docs.astral.sh/uv/), and [Ollama](https://ollama.com).

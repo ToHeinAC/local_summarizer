@@ -1,9 +1,9 @@
 """LLM registry and Ollama availability check. Plain python, no LangChain.
 
 Each model exposes an Ollama tag plus human-facing capability/perf metrics
-shown in the UI; ``label`` and ``note`` are German, like the rest of the UI.
-``installed_tags`` queries the local Ollama server so the UI can warn about
-models that are not pulled yet.
+shown in the UI. ``label`` and ``note`` are per-GUI-language dicts; read them
+with ``i18n.pick``. ``installed_tags`` queries the local Ollama server so the UI
+can warn about models that are not pulled yet.
 """
 
 from __future__ import annotations
@@ -17,34 +17,40 @@ MODELS: list[dict] = [
     {
         "id": "fast",
         "tag": "gemma4:e2b",
-        "label": "Schnell (gemma4:e2b)",
+        "label": {"de": "Schnell (gemma4:e2b)", "en": "Fast (gemma4:e2b)"},
         "speed": 3,
         "quality": 1,
-        "note": "Geringste Latenz; gut für schnelle Entwürfe.",
+        "note": {
+            "de": "Geringste Latenz; gut für schnelle Entwürfe.",
+            "en": "Lowest latency; good for quick drafts.",
+        },
     },
     {
         "id": "standard",
         "tag": "gemma4:e4b",
-        "label": "Standard (gemma4:e4b)",
+        "label": {"de": "Standard (gemma4:e4b)", "en": "Standard (gemma4:e4b)"},
         "speed": 2,
         "quality": 2,
-        "note": "Ausgewogene Voreinstellung.",
+        "note": {"de": "Ausgewogene Voreinstellung.", "en": "Balanced default."},
     },
     {
         "id": "smarter",
         "tag": "qwen3:14b",
-        "label": "Klüger (qwen3:14b)",
+        "label": {"de": "Klüger (qwen3:14b)", "en": "Smarter (qwen3:14b)"},
         "speed": 1,
         "quality": 3,
-        "note": "Stärkere Schlussfolgerungen; langsamer.",
+        "note": {
+            "de": "Stärkere Schlussfolgerungen; langsamer.",
+            "en": "Stronger reasoning; slower.",
+        },
     },
     {
         "id": "accurate",
         "tag": "gpt-oss:20b",
-        "label": "Genau (gpt-oss:20b)",
+        "label": {"de": "Genau (gpt-oss:20b)", "en": "Accurate (gpt-oss:20b)"},
         "speed": 1,
         "quality": 3,
-        "note": "Höchste Genauigkeit; am langsamsten.",
+        "note": {"de": "Höchste Genauigkeit; am langsamsten.", "en": "Highest fidelity; slowest."},
     },
 ]
 

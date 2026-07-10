@@ -12,6 +12,7 @@ See :mod:`src.md_convert` for the PDF/DOCX conversion itself.
 from __future__ import annotations
 
 from src import md_convert
+from src.i18n import DEFAULT_LANG, t
 from src.md_convert import ProgressCb
 
 SUPPORTED_EXTENSIONS = (".pdf", ".docx", ".txt", ".md")
@@ -35,15 +36,17 @@ def to_markdown(
     dpi: int = 150,
     host: str | None = None,
     on_progress: ProgressCb | None = None,
+    lang: str = DEFAULT_LANG,
 ) -> str:
     """Return the Markdown of ``data`` based on ``filename``'s extension.
 
+    ``lang`` is the GUI language of the progress labels and the error message.
     Raises UnsupportedFileError for unknown extensions.
     """
     ext = _extension(filename)
     if ext == ".pdf":
         text = md_convert.pdf_to_markdown(
-            data, ocr_model, rewrite_model, dpi, host, on_progress
+            data, ocr_model, rewrite_model, dpi, host, on_progress, lang
         )
     elif ext == ".docx":
         text = md_convert.docx_to_markdown(data)
@@ -51,7 +54,11 @@ def to_markdown(
         text = data.decode("utf-8", errors="replace")
     else:
         raise UnsupportedFileError(
-            f"Nicht unterstützter Dateityp '{ext or filename}'. "
-            f"Unterstützt: {', '.join(SUPPORTED_EXTENSIONS)}"
+            t(
+                "unsupported_file",
+                lang,
+                ext=ext or filename,
+                supported=", ".join(SUPPORTED_EXTENSIONS),
+            )
         )
     return text.strip()

@@ -54,26 +54,42 @@ matched directly by `.stApp *`, which beats inheriting from its parent. The
 white must be re-asserted on the descendants
 (`... button[kind="primary"] *`).
 
-## Language
-Every user-facing string is **German**. The app name is `app.APP_TITLE`
-("KI-Zusammenfassung") and is used for the page title, the login header, the
-sidebar header, and `st.title`. Labels shown in the UI live with the data they
-describe: `models.MODELS[*]["label"]/["note"]` and
-`templates.TEMPLATES[*]["label"]/["description"]`. Progress-bar labels come from
-`agent.py` and `md_convert.py`.
+## GUI language
+**German by default, English on request.** Every user-facing string comes from
+`src/i18n.py`: `t(key, lang, **fmt)` for UI copy, `pick(field, lang)` for the
+per-language `label`/`note`/`description` dicts that `models.py` and
+`templates.py` carry next to the data they describe.
 
-Strings the **LLM** reads stay English: everything in `prompts.py` (including
-`LANGUAGE_LABELS`) and each template's `structure`. The language selectbox
-therefore renders `app.LANGUAGE_UI_LABELS`, a German display map keyed by the
-same ISO codes — a missing key would be a `KeyError` in `format_func`, which
-`test_app.py` guards.
+The current language lives in `st.session_state["ui_lang"]` (default `"de"`,
+read by `app._ui_lang()`). `app._language_toggle(container)` renders one sidebar
+button (`key="lang_btn"`) labelled with the *other* language — `🌐 English` while
+in German — which flips the state and reruns. The same button is drawn under the
+login form, so an anonymous visitor can switch before signing in. **Logout
+preserves `ui_lang`** while `st.session_state.clear()` drops everything else, so
+the next user on a shared machine keeps the chosen language but inherits no data.
+
+Progress-bar labels are built in `agent.py` and `md_convert.py`, which are below
+the UI layer, so the language is passed down explicitly: `agent.run(ui_lang=...)`
+→ `SummaryState["ui_lang"]`, and `extract.to_markdown(lang=...)` →
+`md_convert.pdf_to_markdown(..., lang)`. Both default to German.
+
+Strings the **LLM** reads stay English regardless of the GUI language:
+everything in `prompts.py` (including `LANGUAGE_LABELS`) and each template's
+`structure`. The summary-language selectbox therefore renders
+`i18n.LANGUAGE_NAMES`, which maps each ISO code to its name in *both* GUI
+languages — a missing entry would be a `KeyError` in `format_func`, which
+`test_app.py` and `test_i18n.py` guard.
+
+`auth.ensure_seeded()` raises its "no seed passwords" `RuntimeError` in English:
+it is an ops/config error, and `main()` catches it and renders the translated
+`seed_missing` string instead of the raw message.
 
 ## Sign-in gate
 `main()` calls `auth.ensure_seeded()` then `_login_gate()` before the sidebar and
 tabs. Signed out, the page is a centered `st.columns([1, 1.4, 1])` block holding
-the title, the caption *Zum Fortfahren anmelden*, and an `st.form("login_form")`
-with Benutzername, a `type="password"` field, and a primary **Anmelden** button;
-a bad credential pair renders `st.error`. `st.stop()` ends the script run, so nothing
+the title, the caption *Zum Fortfahren anmelden*, an `st.form("login_form")`
+with Benutzername, a `type="password"` field, a primary **Anmelden** button, and
+the language toggle; a bad credential pair renders `st.error`. `st.stop()` ends the script run, so nothing
 else is ever rendered to an anonymous visitor. Same shape as the reference repo.
 
 On success the username goes into `st.session_state["user"]` and the script
@@ -103,15 +119,16 @@ Session keys `markdown` / `stem` are the only handoff between the tabs.
 
 ## Layout conventions
 - `layout="wide"`, sidebar `expanded`.
-- Sidebar title `## 📝 KI-Zusammenfassung`, then `---` dividers. The sidebar holds
-  **only** the model selector and the exit button; language and template live in
-  tab 2, next to the work they affect.
+- Sidebar title `## 📝 KI-Zusammenfassung`, then the GUI-language toggle, then
+  `---` dividers. The sidebar holds **only** the language toggle, the model
+  selector, and the exit/logout buttons; the *summary* language and the template
+  live in tab 2, next to the work they affect.
 - Section labels are ALL-CAPS `st.caption()` (MODELL / SPRACHE / VORLAGE) above
   `label_visibility="collapsed"` selectboxes.
 - **In Markdown umwandeln** and **Zusammenfassen** are `type="primary"` (filled green).
   Summary downloads are `use_container_width=True` in a 3-column row.
 - Markdown and summary render inside `st.container(border=True)`.
-- The exit and logout buttons use `key="exit_btn"` / `key="logout_btn"`, which
-  the CSS targets via `.st-key-exit_btn` / `.st-key-logout_btn` to give them a
-  boxed style instead of the transparent sidebar-nav look. Exit SIGTERMs the
-  app's own PID only.
+- The language, exit and logout buttons use `key="lang_btn"` / `key="exit_btn"` /
+  `key="logout_btn"`, which the CSS targets via `.st-key-*` to give them a boxed
+  style instead of the transparent sidebar-nav look. Exit SIGTERMs the app's own
+  PID only.

@@ -66,10 +66,12 @@ def ensure_seeded() -> None:
         return
     users = seed_passwords()
     if not users:
+        # Config error, not GUI copy: app.py catches this and renders the
+        # translated `seed_missing` string instead of the raw message.
         raise RuntimeError(
-            "Keine Start-Passwörter gefunden. Bitte "
+            "No seed passwords found. Set "
             + " / ".join(SEED_USERS.values())
-            + " in .env setzen (siehe .env.example)."
+            + " in .env (see .env.example)."
         )
     _save({"users": {u: {"pw_hash": _hash(pw)} for u, pw in users.items()}})
 

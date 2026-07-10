@@ -5,7 +5,7 @@ detail lives in [docs/](docs/). See [PRD.md](PRD.md) for goals and
 [AGENTS.md](AGENTS.md) for collaboration rules.
 
 ## Status
-All planned features implemented and tested (99 tests passing). End-to-end
+All planned features implemented and tested (111 tests passing). End-to-end
 verified against a live Ollama server, including OCR of a scanned PDF.
 
 ## Architecture (one screen)
@@ -16,6 +16,7 @@ Layered. LangChain/LangGraph are confined to the **agent layer**
 ```
 app.py ─ Streamlit UI: login gate, 2 tabs, progress, downloads, exit  (no LangChain)
   ├─ auth.py        bcrypt user store (data/users.json)
+  ├─ i18n.py        German (default) / English UI strings
   ├─ theme.py       Forest palette + injected CSS
   ├─ TAB 1 ─ extract.py       file bytes → Markdown  (→ download .md)
   │            └─ md_convert.py  PDF per-page rewrite/OCR, DOCX→MD
@@ -52,6 +53,7 @@ ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
 |---|---|---|
 | `src/app.py` | Streamlit UI: login gate, convert tab, summarize tab, sidebar, exit | [ui](docs/ui.md) |
 | `src/auth.py` | bcrypt user store + `verify()` | [ui](docs/ui.md) |
+| `src/i18n.py` | German/English UI strings, `t()` / `pick()` | [ui](docs/ui.md) |
 | `src/theme.py` | Forest palette + injectable CSS | [ui](docs/ui.md) |
 | `src/agent.py` | LangGraph map-reduce summarizer + `run()` entry point | [agent](docs/agent.md) |
 | `src/tools.py` | `ChatOllama` factory + prompt runner | [agent](docs/agent.md) |
@@ -72,12 +74,16 @@ ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
   [KB_BS_local-wiki-he](https://github.com/ToHeinAC/KB_BS_local-wiki-he) without
   its per-database access and maintainer layers — this app has no per-user data,
   so a user is either signed in or not. Delete `data/users.json` to re-seed.
-- **German UI**: every user-facing string is German (app name
-  `app.APP_TITLE` = "KI-Zusammenfassung"), including model/template labels and
-  progress-bar text. Strings the LLM reads stay English — `prompts.py` and each
-  template's `structure` — so `app.LANGUAGE_UI_LABELS` holds the German display
-  names for the language codes while `prompts.LANGUAGE_LABELS` keeps the English
-  ones the finalize prompt needs. See [docs/ui.md](docs/ui.md).
+- **Bilingual UI, German by default**: every user-facing string lives in
+  `src/i18n.py`; a sidebar button toggles German ↔ English and the choice is kept
+  in `session_state["ui_lang"]` (it survives Logout). Model and template labels
+  are per-language dicts in their own registries. Progress labels are built in
+  the agent/ingestion layers, so the language is passed down explicitly
+  (`agent.run(ui_lang=...)`, `extract.to_markdown(lang=...)`). Strings the LLM
+  reads stay English — `prompts.py` and each template's `structure` — so
+  `i18n.LANGUAGE_NAMES` holds the display names for the summary-language codes
+  while `prompts.LANGUAGE_LABELS` keeps the English ones the finalize prompt
+  needs. See [docs/ui.md](docs/ui.md).
 - **Two-step UI**: conversion and summarization are separate tabs. The user can
   inspect and download the intermediate Markdown, fix it, and feed a corrected
   `.md` back into step 2 — conversion is the expensive, error-prone half, so it

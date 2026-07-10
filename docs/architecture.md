@@ -9,7 +9,8 @@ That is *not* LangChain, so it stays on the plain-Python side of the boundary �
 the same way `models.py` already queries `GET /api/tags` over `urllib`.
 
 ## Layers
-1. **UI (`app.py`, `theme.py`, `auth.py`)** — Streamlit, gated by a sign-in form
+1. **UI (`app.py`, `theme.py`, `auth.py`, `i18n.py`)** — Streamlit, German by
+   default with an English toggle (see [ui.md](ui.md)), gated by a sign-in form
    (`auth.verify`, bcrypt hashes in `data/users.json`); nothing renders until a
    user is in `st.session_state["user"]`. Then two tabs. Tab 1 uploads a document
    and calls `extract.to_markdown()` to convert it, offering the `.md` as a
@@ -23,8 +24,8 @@ the same way `models.py` already queries `GET /api/tags` over `urllib`.
 3. **Ingestion (`extract.py`, `md_convert.py`, `ollama_client.py`)** — file
    bytes → Markdown, including vision OCR for scanned PDF pages.
    See [ingestion.md](ingestion.md).
-4. **Services (plain Python)** — `language.py`, `templates.py`, `models.py`,
-   `export.py`, `config.py`, `prompts.py`.
+4. **Services (plain Python)** — `i18n.py`, `language.py`, `templates.py`,
+   `models.py`, `export.py`, `config.py`, `prompts.py`.
 
 ## Data flow
 ```

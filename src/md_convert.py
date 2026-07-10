@@ -18,6 +18,7 @@ import io
 from collections.abc import Callable, Iterator
 
 from src import ollama_client
+from src.i18n import DEFAULT_LANG, t
 from src.prompts import (
     MD_REWRITE_PROMPT,
     OCR_DEEPSEEK_PROMPT,
@@ -127,16 +128,20 @@ def pdf_to_markdown(
     dpi: int,
     host: str | None = None,
     on_progress: ProgressCb | None = None,
+    lang: str = DEFAULT_LANG,
 ) -> str:
-    """Convert a PDF to Markdown, OCR'ing any page without a usable text layer."""
+    """Convert a PDF to Markdown, OCR'ing any page without a usable text layer.
+
+    ``lang`` selects the GUI language of the per-page progress labels.
+    """
     total = _pdf_page_count(data)
     parts: list[str] = []
     used_ocr = False
     try:
         for i, (kind, payload) in enumerate(iter_pdf_pages(data, dpi)):
             if on_progress:
-                label = "OCR" if kind == "image" else "Text"
-                on_progress(i, total, f"Seite {i + 1}/{total} ({label})")
+                kind_label = "OCR" if kind == "image" else "Text"
+                on_progress(i, total, t("page", lang, done=i + 1, total=total, kind=kind_label))
             if kind == "text":
                 parts.append(rewrite_text(payload, rewrite_model, host))
             else:
@@ -149,5 +154,5 @@ def pdf_to_markdown(
         if used_ocr:
             ollama_client.unload(ocr_model, host)
     if on_progress:
-        on_progress(total, total, "In Markdown umgewandelt")
+        on_progress(total, total, t("converted", lang))
     return "\n\n".join(parts)

@@ -5,8 +5,9 @@ Every upload becomes **Markdown before summarization**. Pipeline ported from
 (Apache-2.0), itself derived from `ToHeinAC/MD-maker`.
 
 ## Dispatch (`src/extract.py`)
-`to_markdown(filename, data, *, ocr_model, rewrite_model, dpi, host, on_progress) -> str`
-dispatches on the file extension:
+`to_markdown(filename, data, *, ocr_model, rewrite_model, dpi, host, on_progress, lang) -> str`
+dispatches on the file extension (`lang` only selects the language of the
+progress labels and of `UnsupportedFileError`; default `"de"`):
 
 | Extension | Path |
 |---|---|

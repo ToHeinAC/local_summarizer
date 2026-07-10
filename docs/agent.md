@@ -39,10 +39,14 @@ agent.run(
     rewrite_model="gemma4:e4b",                # text model for digital pages
     pdf_dpi=150,
     on_progress=lambda frac, label: ...,
+    ui_lang="de",                              # language of the progress labels
 ) -> str  # Markdown
 ```
 `model_id` is resolved to an Ollama tag via `models.get_model`. `ocr_model` and
-`rewrite_model` are raw Ollama tags, not registry ids.
+`rewrite_model` are raw Ollama tags, not registry ids. `ui_lang` (`"de"`/`"en"`)
+only selects the language of the progress labels, which the nodes build with
+`i18n.t`; the summary's own language is `target_language`. It travels in
+`SummaryState["ui_lang"]` and is forwarded to `extract.to_markdown(lang=...)`.
 
 ## Testing hook
 Nodes call `make_llm`/`run_prompt` from the module namespace, so tests

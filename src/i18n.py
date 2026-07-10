@@ -1,0 +1,140 @@
+"""UI string catalogue. Plain python, no LangChain.
+
+German is the default GUI language; English is the alternative. Only strings a
+*user* reads live here — strings the *LLM* reads (``prompts.py``, a template's
+``structure``) stay English regardless of the GUI language.
+
+``t(key, lang, **fmt)`` looks a string up and applies ``str.format``. Registry
+labels (``models.py``, ``templates.py``) carry their own ``{"de", "en"}`` dicts
+next to the data they describe; use ``pick()`` to read them.
+"""
+
+from __future__ import annotations
+
+DEFAULT_LANG = "de"
+
+# GUI languages, in toggle order. Values are the button labels.
+LANGUAGES = {"de": "Deutsch", "en": "English"}
+
+# Display names for the *summary* language codes (prompts.LANGUAGE_LABELS keys).
+LANGUAGE_NAMES: dict[str, dict[str, str]] = {
+    "auto": {"de": "Automatisch (Sprache des Dokuments)", "en": "Auto (document's language)"},
+    "en": {"de": "Englisch", "en": "English"},
+    "de": {"de": "Deutsch", "en": "German"},
+    "fr": {"de": "Französisch", "en": "French"},
+    "es": {"de": "Spanisch", "en": "Spanish"},
+    "it": {"de": "Italienisch", "en": "Italian"},
+    "pt": {"de": "Portugiesisch", "en": "Portuguese"},
+    "nl": {"de": "Niederländisch", "en": "Dutch"},
+}
+
+STRINGS: dict[str, dict[str, str]] = {
+    # --- shell -------------------------------------------------------------
+    "app_title": {"de": "KI-Zusammenfassung", "en": "AI Summarizer"},
+    "tab_convert": {"de": "1 · Umwandeln", "en": "1 · Convert"},
+    "tab_summarize": {"de": "2 · Zusammenfassen", "en": "2 · Summarize"},
+    # --- sign-in -----------------------------------------------------------
+    "sign_in_hint": {"de": "Zum Fortfahren anmelden", "en": "Sign in to continue"},
+    "username": {"de": "Benutzername", "en": "Username"},
+    "password": {"de": "Passwort", "en": "Password"},
+    "sign_in": {"de": "Anmelden", "en": "Sign in"},
+    "bad_credentials": {
+        "de": "Benutzername oder Passwort ist ungültig.",
+        "en": "Invalid username or password.",
+    },
+    "seed_missing": {
+        "de": "Keine Start-Passwörter gefunden. Bitte {vars} in .env setzen (siehe .env.example).",
+        "en": "No seed passwords found. Set {vars} in .env (see .env.example).",
+    },
+    # --- sidebar -----------------------------------------------------------
+    "model_caption": {"de": "MODELL", "en": "MODEL"},
+    "model_label": {"de": "Modell", "en": "Model"},
+    "speed_quality": {
+        "de": "Geschwindigkeit {speed}  Qualität {quality}",
+        "en": "Speed {speed}  Quality {quality}",
+    },
+    "not_installed": {
+        "de": "`{tag}` ist nicht installiert. Ausführen: `ollama pull {tag}`",
+        "en": "`{tag}` is not installed. Run: `ollama pull {tag}`",
+    },
+    "signed_in_as": {"de": "Angemeldet als **{user}**", "en": "Signed in as **{user}**"},
+    "exit_app": {"de": "App beenden", "en": "Exit app"},
+    "shutting_down": {"de": "Wird beendet…", "en": "Shutting down…"},
+    "logout": {"de": "Abmelden", "en": "Logout"},
+    # --- tab 1: convert ----------------------------------------------------
+    "convert_hint": {
+        "de": (
+            "Dokumente werden zuerst in Markdown umgewandelt; "
+            "gescannte PDF-Seiten werden lokal per OCR gelesen."
+        ),
+        "en": "Documents are converted to Markdown first; scanned PDF pages are OCR'd locally.",
+    },
+    "upload_document": {"de": "Dokument hochladen", "en": "Upload a document"},
+    "convert_button": {"de": "In Markdown umwandeln", "en": "Convert to Markdown"},
+    "conversion_failed": {
+        "de": "Konvertierung fehlgeschlagen: {error}",
+        "en": "Conversion failed: {error}",
+    },
+    "download_format": {"de": ".{fmt} herunterladen", "en": "Download .{fmt}"},
+    "default_stem": {"de": "dokument", "en": "document"},
+    # --- tab 2: summarize --------------------------------------------------
+    "source_label": {"de": "Quelle", "en": "Source"},
+    "source_step1": {"de": "Markdown aus Schritt 1", "en": "Markdown from step 1"},
+    "source_upload": {"de": ".md-Datei hochladen", "en": "Upload a .md file"},
+    "step1_hint": {
+        "de": (
+            "Wandeln Sie zuerst in Schritt 1 ein Dokument um, "
+            "oder laden Sie hier eine `.md`-Datei hoch."
+        ),
+        "en": "Convert a document in step 1 first, or upload a `.md` file here.",
+    },
+    "upload_markdown": {"de": "Markdown-Datei hochladen", "en": "Upload a Markdown file"},
+    "language_caption": {"de": "SPRACHE", "en": "LANGUAGE"},
+    "language_label": {"de": "Sprache der Zusammenfassung", "en": "Summary language"},
+    "template_caption": {"de": "VORLAGE", "en": "TEMPLATE"},
+    "template_label": {"de": "Vorlage", "en": "Template"},
+    "summarize_button": {"de": "Zusammenfassen", "en": "Summarize"},
+    "summary_heading": {"de": "Zusammenfassung", "en": "Summary"},
+    "summary_suffix": {"de": "zusammenfassung", "en": "summary"},
+    "summarize_failed": {
+        "de": "Zusammenfassung fehlgeschlagen: {error}",
+        "en": "Summarization failed: {error}",
+    },
+    # --- progress & errors (agent.py, md_convert.py, extract.py) -----------
+    "preparing": {"de": "Vorbereitung…", "en": "Preparing…"},
+    "converting": {"de": "Konvertiere zu Markdown…", "en": "Converting to Markdown…"},
+    "convert_start": {"de": "Konvertiere zu Markdown", "en": "Converting to Markdown"},
+    "page": {"de": "Seite {done}/{total} ({kind})", "en": "Page {done}/{total} ({kind})"},
+    "converted": {"de": "In Markdown umgewandelt", "en": "Converted to Markdown"},
+    "read_document": {"de": "Dokument gelesen", "en": "Read document"},
+    "split": {"de": "In {count} Abschnitt(e) geteilt", "en": "Split into {count} section(s)"},
+    "map_section": {
+        "de": "Fasse Abschnitt {done}/{total} zusammen",
+        "en": "Summarizing section {done}/{total}",
+    },
+    "reducing": {
+        "de": "Führe Abschnitts-Zusammenfassungen zusammen",
+        "en": "Combining section summaries",
+    },
+    "finalizing": {"de": "Schreibe finale Zusammenfassung", "en": "Writing final summary"},
+    "done": {"de": "Fertig", "en": "Done"},
+    "no_text": {
+        "de": "Im Dokument wurde kein extrahierbarer Text gefunden.",
+        "en": "No extractable text found in the document.",
+    },
+    "unsupported_file": {
+        "de": "Nicht unterstützter Dateityp '{ext}'. Unterstützt: {supported}",
+        "en": "Unsupported file type '{ext}'. Supported: {supported}",
+    },
+}
+
+
+def t(key: str, lang: str = DEFAULT_LANG, **fmt: object) -> str:
+    """Return the ``lang`` variant of ``key``, formatted with ``fmt``."""
+    text = STRINGS[key][lang if lang in LANGUAGES else DEFAULT_LANG]
+    return text.format(**fmt) if fmt else text
+
+
+def pick(field: dict[str, str], lang: str = DEFAULT_LANG) -> str:
+    """Return the ``lang`` variant of a registry field like ``model["label"]``."""
+    return field[lang if lang in LANGUAGES else DEFAULT_LANG]
