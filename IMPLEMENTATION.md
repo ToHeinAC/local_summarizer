@@ -96,14 +96,27 @@ ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
 uv run streamlit run src/app.py --server.port 8530
 uv run pytest
 ./tunnel.sh                     # optional: public URL via Cloudflare quick tunnel
+./tunnel.sh stop                # shut the app + tunnel down again
 ```
 Test map: [docs/testing.md](docs/testing.md).
 
 `tunnel.sh` starts the app if needed, then exposes port 8530 as a temporary
 `*.trycloudflare.com` URL (no Cloudflare account; needs `cloudflared`). It moves
-any named-tunnel config aside to force quick-tunnel mode, restores it on exit,
-and shuts down once port 8530 stops listening. Ported from
+any named-tunnel config aside to force quick-tunnel mode and restores it once the
+tunnel has registered. Ported from
 [KB_BS_local-wiki-he](https://github.com/ToHeinAC/KB_BS_local-wiki-he).
+
+**Persistence.** The app and the tunnel are started with `setsid nohup`, so they
+get their own session *and* ignore `SIGHUP`; closing the terminal leaves both
+running. The script itself returns as soon as the URL is printed. A detached
+watchdog stops the tunnel once port 8530 stops listening, so the in-app exit
+button still tears the whole thing down. `./tunnel.sh stop` kills both.
+
+`setsid` alone is not enough: it removes the controlling terminal but leaves
+`SIGHUP` at its default action, so anything that signals the process group still
+kills the app. `nohup` supplies the ignore. The watchdog is passed the tunnel's
+PID as an argument rather than a `pkill -f` pattern — a pattern would appear in
+the watchdog's own command line and it would kill itself.
 
 ## Known constraints
 - Requires a reachable Ollama server (`OLLAMA_HOST`, default
