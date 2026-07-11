@@ -1,12 +1,13 @@
 """Streamlit UI for the local summarizer. No LangChain in this module.
 
 The GUI language is German by default and toggles to English with the sidebar
-button; every user-facing string comes from ``i18n``. Sign-in is required; the
-two-step workflow follows, one tab each:
+button; every user-facing string comes from ``i18n``. Sign-in is required.
 
-1. Convert — upload a document, turn it into Markdown, download the ``.md``.
-2. Summarize — reuse step 1's Markdown (default) or upload your own ``.md``,
-   choose language and template, summarize, download the result.
+Single-window workflow: pick a model (sidebar), choose the summary language and
+template, upload a document, press **Zusammenfassen**. Conversion is plain text
+(digital pages verbatim, scanned pages OCR'd) and feeds straight into the
+summarizer, so one click produces the summary and its downloads — no separate
+convert step and no intermediate Markdown.
 
 Run: uv run streamlit run src/app.py --server.port 8530
 """
@@ -18,7 +19,7 @@ import signal
 
 import streamlit as st
 
-from src import agent, auth, export, extract, ollama_client, theme
+from src import agent, auth, export, ollama_client, theme
 from src.config import load_config
 from src.i18n import DEFAULT_LANG, LANGUAGE_NAMES, LANGUAGES, pick, t
 from src.models import DEFAULT_MODEL_ID, annotate_availability
@@ -97,7 +98,6 @@ def _sidebar(lang: str) -> dict:
         st.sidebar.warning(t("not_installed", lang, tag=model["tag"]))
 
     with st.sidebar.expander(t("advanced_options", lang), expanded=False):
-        st.toggle(t("fast_convert", lang), key="fast_convert", help=t("fast_convert_help", lang))
         if st.button(t("clear_vram", lang), key="clear_vram_btn"):
             unloaded = ollama_client.unload_all(CFG.ollama_host)
             if unloaded:
@@ -118,88 +118,6 @@ def _sidebar(lang: str) -> dict:
         st.rerun()
 
     return {"model": model}
-
-
-def _convert(uploaded, lang: str) -> None:
-    bar = st.progress(0.0, text=t("converting", lang))
-
-    def on_progress(done: int, total: int, label: str) -> None:
-        bar.progress(done / total if total else 1.0, text=label)
-
-    try:
-        markdown = extract.to_markdown(
-            uploaded.name,
-            uploaded.getvalue(),
-            ocr_model=CFG.ocr_model,
-            rewrite_model=CFG.rewrite_model,
-            dpi=CFG.pdf_dpi,
-            host=CFG.ollama_host,
-            on_progress=on_progress,
-            lang=lang,
-            fast=st.session_state.get("fast_convert", False),
-        )
-    except Exception as exc:  # surface any conversion/OCR failure to the user
-        bar.empty()
-        st.error(t("conversion_failed", lang, error=exc))
-        return
-
-    bar.empty()
-    if not markdown.strip():
-        st.error(t("no_text", lang))
-        return
-    st.session_state["markdown"] = markdown
-    st.session_state["stem"] = os.path.splitext(uploaded.name)[0]
-    st.session_state.pop("summary", None)
-
-
-def _tab_convert(lang: str) -> None:
-    st.caption(t("convert_hint", lang))
-    uploaded = st.file_uploader(t("upload_document", lang), type=ACCEPTED)
-
-    if st.button(t("convert_button", lang), type="primary", disabled=uploaded is None):
-        _convert(uploaded, lang)
-
-    markdown = st.session_state.get("markdown")
-    if not markdown:
-        return
-    stem = st.session_state.get("stem", t("default_stem", lang))
-    st.markdown("---")
-    st.subheader("Markdown")
-    with st.container(border=True, height=400):
-        st.markdown(markdown)
-    st.download_button(
-        t("download_format", lang, fmt="md"),
-        data=markdown.encode("utf-8"),
-        file_name=f"{stem}.md",
-        mime="text/markdown",
-    )
-
-
-def _summary_source(lang: str) -> tuple[str | None, str]:
-    """Return the Markdown to summarize and its filename stem."""
-    has_step1 = bool(st.session_state.get("markdown"))
-    step1, upload = t("source_step1", lang), t("source_upload", lang)
-    source = st.radio(
-        t("source_label", lang),
-        [step1, upload],
-        index=0 if has_step1 else 1,
-        horizontal=True,
-        label_visibility="collapsed",
-    )
-    fallback_stem = t("default_stem", lang)
-    if source == step1:
-        if not has_step1:
-            st.info(t("step1_hint", lang))
-            return None, fallback_stem
-        return st.session_state["markdown"], st.session_state.get("stem", fallback_stem)
-
-    uploaded = st.file_uploader(t("upload_markdown", lang), type=["md"])
-    if uploaded is None:
-        return None, fallback_stem
-    return (
-        uploaded.getvalue().decode("utf-8", errors="replace"),
-        os.path.splitext(uploaded.name)[0],
-    )
 
 
 def _summary_options(lang: str) -> dict:
@@ -230,7 +148,8 @@ def _summary_options(lang: str) -> dict:
     return {"language": language, "template_id": template_id}
 
 
-def _summarize(markdown: str, opts: dict, model: dict, lang: str) -> None:
+def _run(uploaded, opts: dict, model: dict, lang: str) -> None:
+    """Convert the upload to plain text and summarize it in one pass."""
     bar = st.progress(0.0, text=t("preparing", lang))
 
     def on_progress(fraction: float, label: str) -> None:
@@ -238,21 +157,27 @@ def _summarize(markdown: str, opts: dict, model: dict, lang: str) -> None:
 
     try:
         summary = agent.run(
-            text=markdown,
+            filename=uploaded.name,
+            data=uploaded.getvalue(),
             template_id=opts["template_id"],
             model_id=model["id"],
             target_language=opts["language"],
             host=CFG.ollama_host,
+            ocr_model=CFG.ocr_model,
+            rewrite_model=CFG.rewrite_model,
+            pdf_dpi=CFG.pdf_dpi,
+            fast=True,  # plain-text conversion: no per-page LLM rewrite
             on_progress=on_progress,
             ui_lang=lang,
         )
-    except Exception as exc:  # surface any LLM failure to the user
+    except Exception as exc:  # surface any conversion/LLM failure to the user
         bar.empty()
         st.error(t("summarize_failed", lang, error=exc))
         return
 
     bar.empty()
     st.session_state["summary"] = summary
+    st.session_state["stem"] = os.path.splitext(uploaded.name)[0]
 
 
 def _downloads(summary: str, stem: str, lang: str) -> None:
@@ -269,20 +194,21 @@ def _downloads(summary: str, stem: str, lang: str) -> None:
         )
 
 
-def _tab_summarize(model: dict, lang: str) -> None:
-    markdown, stem = _summary_source(lang)
+def _main_panel(model: dict, lang: str) -> None:
+    st.caption(t("intro_hint", lang))
     opts = _summary_options(lang)
+    uploaded = st.file_uploader(t("upload_document", lang), type=ACCEPTED)
 
-    disabled = markdown is None or not model["installed"]
+    disabled = uploaded is None or not model["installed"]
     if st.button(t("summarize_button", lang), type="primary", disabled=disabled):
-        _summarize(markdown, opts, model, lang)
+        _run(uploaded, opts, model, lang)
 
     if summary := st.session_state.get("summary"):
         st.markdown("---")
         st.subheader(t("summary_heading", lang))
         with st.container(border=True):
             st.markdown(summary)
-        _downloads(summary, stem, lang)
+        _downloads(summary, st.session_state.get("stem", t("default_stem", lang)), lang)
 
 
 def main() -> None:
@@ -303,11 +229,7 @@ def main() -> None:
     opts = _sidebar(lang)
 
     st.title(t("app_title", lang))
-    convert_tab, summarize_tab = st.tabs([t("tab_convert", lang), t("tab_summarize", lang)])
-    with convert_tab:
-        _tab_convert(lang)
-    with summarize_tab:
-        _tab_summarize(opts["model"], lang)
+    _main_panel(opts["model"], lang)
 
 
 if __name__ == "__main__":

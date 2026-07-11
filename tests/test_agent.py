@@ -79,6 +79,18 @@ def test_pdf_is_converted_to_markdown_before_summarizing(recorder, pdf_bytes, st
     assert "# Rewritten" in recorder[-1]
 
 
+def test_fast_pdf_skips_the_per_page_rewrite(recorder, pdf_bytes, stub_ollama):
+    """fast=True uses the digital page's text layer verbatim: no rewrite call."""
+    agent.run(
+        filename="report.pdf",
+        data=pdf_bytes,
+        template_id="standard",
+        model_id="fast",
+        fast=True,
+    )
+    assert not stub_ollama.rewritten, "fast mode must not LLM-rewrite digital pages"
+
+
 def test_explicit_target_language_in_finalize_prompt(recorder):
     agent.run(text="A short document.", template_id="standard", model_id="fast", target_language="de")
     assert "German" in recorder[-1]

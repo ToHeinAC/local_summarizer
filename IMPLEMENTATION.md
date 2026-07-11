@@ -5,7 +5,7 @@ detail lives in [docs/](docs/). See [PRD.md](PRD.md) for goals and
 [AGENTS.md](AGENTS.md) for collaboration rules.
 
 ## Status
-All planned features implemented and tested (111 tests passing). End-to-end
+All planned features implemented and tested (110 tests passing). End-to-end
 verified against a live Ollama server, including OCR of a scanned PDF.
 
 ## Architecture (one screen)
@@ -14,14 +14,14 @@ Layered. LangChain/LangGraph are confined to the **agent layer**
 `ollama_client.py` uses the plain `ollama` package, not LangChain.
 
 ```
-app.py ─ Streamlit UI: login gate, 2 tabs, progress, downloads, exit  (no LangChain)
+app.py ─ Streamlit UI: login gate, single window, progress, downloads, exit  (no LangChain)
   ├─ auth.py        bcrypt user store (data/users.json)
   ├─ i18n.py        German (default) / English UI strings
   ├─ theme.py       Forest palette + injected CSS
-  ├─ TAB 1 ─ extract.py       file bytes → Markdown  (→ download .md)
-  │            └─ md_convert.py  PDF per-page rewrite/OCR, DOCX→MD
-  │                 └─ ollama_client.py  vision OCR + text rewrite
-  └─ TAB 2 ─ agent.run() ─ LangGraph: ingest→chunk→map→reduce→finalize
+  └─ agent.run(filename=…, fast=True) ─ LangGraph: ingest→chunk→map→reduce→finalize
+       ├─ extract.py       file bytes → plain text   (called inside ingest)
+       │    └─ md_convert.py  PDF per-page verbatim/OCR, DOCX→MD
+       │         └─ ollama_client.py  vision OCR (rewrite unused in fast mode)
        ├─ tools.py         ChatOllama wrapper        (LangChain OK)
        ├─ language.py      detect source language
        ├─ templates.py     template registry
@@ -31,27 +31,26 @@ app.py ─ Streamlit UI: login gate, 2 tabs, progress, downloads, exit  (no Lang
        └─ config.py        dotenv config
 ```
 
-Sign-in gates everything: `app.py` calls `auth.verify()` before any tab is
-rendered (see [docs/ui.md](docs/ui.md)). Data flow, two explicit steps:
+Sign-in gates everything: `app.py` calls `auth.verify()` before the window is
+rendered (see [docs/ui.md](docs/ui.md)). One-click flow:
 
-1. **Convert (tab 1)** — the uploaded file goes to `extract.to_markdown()`
-   (per-page: digital PDF text is LLM-rewritten, scanned pages are OCR'd by a
-   vision model). The Markdown is shown, downloadable as `.md`, and kept in
-   `st.session_state["markdown"]`.
-2. **Summarize (tab 2)** — that Markdown (default) or a user-uploaded `.md`,
-   plus the language and template chosen there, goes to `agent.run(text=...)`,
-   which detects language, chunks, map-reduces via the selected Ollama model,
-   and finalizes → `export.py` produces download bytes.
+- **Upload & summarize** — pick model (sidebar), summary language and template
+  (main panel), upload a **PDF/DOCX/TXT/MD**, press **Zusammenfassen**. That
+  single click calls `agent.run(filename=…, data=…, fast=True)`: the ingest node
+  converts the file to **plain text** (digital PDF pages verbatim, scanned pages
+  OCR'd by a vision model — no per-page LLM rewrite), detects language, chunks,
+  map-reduces via the selected Ollama model, and finalizes → `export.py` produces
+  the `.md`/`.pdf`/`.docx` download bytes. No intermediate Markdown is shown.
 
-Each step has its own progress callback, so Streamlit stays out of the agent and
-ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
+The one progress callback threads through the whole run, so Streamlit stays out
+of the agent and ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
 [docs/agent.md](docs/agent.md), [docs/ingestion.md](docs/ingestion.md),
 [docs/ui.md](docs/ui.md).
 
 ## Module map
 | Module | Role | Docs |
 |---|---|---|
-| `src/app.py` | Streamlit UI: login gate, convert tab, summarize tab, sidebar, exit | [ui](docs/ui.md) |
+| `src/app.py` | Streamlit UI: login gate, single upload→summary window, sidebar, exit | [ui](docs/ui.md) |
 | `src/auth.py` | bcrypt user store + `verify()` | [ui](docs/ui.md) |
 | `src/i18n.py` | German/English UI strings, `t()` / `pick()` | [ui](docs/ui.md) |
 | `src/theme.py` | Forest palette + injectable CSS | [ui](docs/ui.md) |
@@ -84,34 +83,37 @@ ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
   `i18n.LANGUAGE_NAMES` holds the display names for the summary-language codes
   while `prompts.LANGUAGE_LABELS` keeps the English ones the finalize prompt
   needs. See [docs/ui.md](docs/ui.md).
-- **Two-step UI**: conversion and summarization are separate tabs. The user can
-  inspect and download the intermediate Markdown, fix it, and feed a corrected
-  `.md` back into step 2 — conversion is the expensive, error-prone half, so it
-  is worth making it a visible artifact rather than a hidden stage.
-- **Markdown-first ingestion**: every upload becomes Markdown before
-  summarization. PDF pages are routed per page — a text layer ≥ 40 chars is
-  LLM-rewritten (wording preserved); anything less is rasterized and OCR'd by a
-  vision model. Ported from
+- **Single-window, one-click flow**: settings (model, summary language,
+  template) and the file upload live on one screen; pressing **Zusammenfassen**
+  converts *and* summarizes in a single `agent.run(filename=…, fast=True)` pass.
+  No separate convert step and no intermediate Markdown to inspect or download —
+  the earlier two-tab, download-the-`.md`-first workflow was dropped as friction.
+- **Plain-text conversion (always)**: the UI always converts with `fast=True` —
+  digital PDF pages use their extracted text layer verbatim (zero LLM rewrite
+  calls); scanned pages still OCR. Trade-off: plainer text and raw reading order
+  on multi-column layouts, in exchange for a near-instant, byte-exact conversion.
+  The per-page LLM-rewrite path still exists in `md_convert` (`fast=False`) for
+  direct API callers and tests, but is no longer reachable from the UI.
+- **Markdown-first ingestion**: every upload becomes text before
+  summarization. PDF pages are routed per page — a text layer ≥ 40 chars is used
+  verbatim (or, with `fast=False`, LLM-rewritten with wording preserved);
+  anything less is rasterized and OCR'd by a vision model. Ported from
   [KB_BS_local-wiki-he](https://github.com/ToHeinAC/KB_BS_local-wiki-he)
   (Apache-2.0). See [docs/ingestion.md](docs/ingestion.md).
 - **OCR is an Ollama vision model** (`deepseek-ocr:3b`), not tesseract — keeps
   the app offline with no system binaries.
-- **Cost**: the per-page rewrite means a digital PDF costs one LLM call per page
-  before summarizing. Deliberate, matching the reference repo; set
-  `REWRITE_MODEL` to a fast model for large documents.
+- **Cost**: because the UI converts with `fast=True`, a digital PDF adds **no**
+  LLM calls before summarizing (its text layer is used verbatim); only scanned
+  pages cost a vision-model OCR call. The `fast=False` per-page rewrite (one LLM
+  call per page) remains available to API callers. See [docs/ingestion.md](docs/ingestion.md).
 - **Performance**: two capped-cost decisions keep the local LLM fast. (1) Every
   Ollama call pins `num_ctx` (8192 for text, 16384 for OCR) — Ollama otherwise
   allocates each model's full 128k window, ballooning VRAM and cutting
-  throughput ~5× with no benefit for these small prompts. (2) PDF pages are
-  converted concurrently (`md_convert.MAX_CONVERT_WORKERS=4`); this needs
+  throughput ~5× with no benefit for these small prompts. (2) Scanned PDF pages
+  are OCR'd concurrently (`md_convert.MAX_CONVERT_WORKERS=4`); this needs
   `OLLAMA_NUM_PARALLEL≥2` on the Ollama server to matter (~1.9× on a 6-page PDF).
   Both cost no precision. See [docs/ingestion.md](docs/ingestion.md),
   [docs/agent.md](docs/agent.md).
-- **Fast conversion toggle**: the *Fast conversion (skip LLM)* switch in the
-  sidebar's Advanced options sets `to_markdown(fast=True)`, which uses a digital
-  PDF's extracted text verbatim instead of an LLM rewrite per page — near-instant
-  and byte-exact (32s → ~0s on a 6-page PDF), at the cost of plainer Markdown and
-  raw reading order. Scanned pages still OCR. See [docs/ingestion.md](docs/ingestion.md).
 - **Theme**: Forest palette (green/cream), Inter + Libre Baskerville, ported
   from the same repo. Colors are duplicated in `.streamlit/config.toml` and
   `theme.FOREST` and must stay in sync. See [docs/ui.md](docs/ui.md).
@@ -120,8 +122,7 @@ ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
   Uninstalled models are flagged in the UI. See [docs/models.md](docs/models.md).
 - **PDF export**: `fpdf2` (pure Python). Uses a system DejaVu Unicode font when
   present, else Helvetica with latin-1 fallback. See [docs/export.md](docs/export.md).
-- **Formats in**: PDF, DOCX, TXT, MD (step 1); MD only (step 2's own upload).
-  **Formats out**: MD (step 1), MD/PDF/DOCX (step 2).
+- **Formats in**: PDF, DOCX, TXT, MD. **Formats out**: MD/PDF/DOCX (the summary).
 - **Chunking**: character-bounded (6000/200 overlap); single-chunk documents
   skip the map/reduce passes. See [docs/agent.md](docs/agent.md).
 

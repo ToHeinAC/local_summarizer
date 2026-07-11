@@ -86,7 +86,7 @@ it is an ops/config error, and `main()` catches it and renders the translated
 
 ## Sign-in gate
 `main()` calls `auth.ensure_seeded()` then `_login_gate()` before the sidebar and
-tabs. Signed out, the page is a centered `st.columns([1, 1.4, 1])` block holding
+main panel. Signed out, the page is a centered `st.columns([1, 1.4, 1])` block holding
 the title, the caption *Zum Fortfahren anmelden*, an `st.form("login_form")`
 with Benutzername, a `type="password"` field, a primary **Anmelden** button, and
 the language toggle; a bad credential pair renders `st.error`. `st.stop()` ends the script run, so nothing
@@ -95,42 +95,40 @@ else is ever rendered to an anonymous visitor. Same shape as the reference repo.
 On success the username goes into `st.session_state["user"]` and the script
 reruns. The sidebar then ends with `Angemeldet als **<user>**` and two equal
 boxed buttons, **App beenden** (`key="exit_btn"`) and **Abmelden**
-(`key="logout_btn"`). Abmelden calls `st.session_state.clear()`, which also drops the converted Markdown
-and the summary, so a shared machine leaks nothing to the next user. Passwords
+(`key="logout_btn"`). Abmelden calls `st.session_state.clear()`, which also drops the summary,
+so a shared machine leaks nothing to the next user. Passwords
 live as bcrypt hashes in `data/users.json`, seeded once from the `SEED_PW_*`
 variables in `.env` (see [../src/auth.py](../src/auth.py)). A missing seed raises,
 and `main()` renders that as an `st.error` instead of a traceback.
 
-## Two-tab workflow
-The main area is `st.tabs(["1 · Umwandeln", "2 · Zusammenfassen"])`:
+## Single-window workflow
+The main area is one panel — no tabs. Top to bottom: an intro caption, the
+summary **Sprache** and **Vorlage** selectboxes in a 2-column row, a file
+uploader accepting **PDF/DOCX/TXT/MD**, and one primary **Zusammenfassen**
+button (disabled until a file is uploaded and the chosen model is installed).
 
-1. **Umwandeln** — upload a PDF/DOCX/TXT/MD, press **In Markdown umwandeln**. The UI
-   calls `extract.to_markdown()` directly (plain Python, no agent) and stores the
-   result in `st.session_state["markdown"]` plus the filename `["stem"]`. The
-   Markdown is previewed in a scrolling bordered container and downloadable as
-   `.md`. A fresh conversion clears any stale `["summary"]`.
-2. **Zusammenfassen** — a radio picks the source: `SOURCE_STEP1` (step 1's
-   Markdown, the default once it exists) or `SOURCE_UPLOAD` (a `.md` upload —
-   **only** `.md` is accepted here). Language and template are chosen in a
-   2-column row, then **Zusammenfassen** calls `agent.run(text=...)`. No re-conversion happens, so no
-   OCR/rewrite arguments are passed.
-
-Session keys `markdown` / `stem` are the only handoff between the tabs.
+Clicking it runs `app._run()`, which calls
+`agent.run(filename=..., data=..., fast=True, ...)` — a single pass that converts
+the upload to **plain text** (digital PDF pages verbatim, scanned pages OCR'd; no
+per-page LLM rewrite) *and* summarizes it. On success the summary is stored in
+`st.session_state["summary"]` (with the filename `["stem"]`), rendered in a
+bordered container, and offered as `.md` / `.docx` / `.pdf` downloads. There is
+no intermediate Markdown preview or `.md`/original-text download. `summary` /
+`stem` are the only session keys the flow writes.
 
 ## Layout conventions
 - `layout="wide"`, sidebar `expanded`.
 - Sidebar title `## 📝 KI-Zusammenfassung`, then the GUI-language toggle, then
   `---` dividers. The sidebar holds the language toggle, the model selector, an
   **Advanced options** expander, and the exit/logout buttons; the *summary*
-  language and the template live in tab 2, next to the work they affect.
-- **Advanced options** (`st.expander`, collapsed) holds the *Fast conversion
-  (skip LLM)* toggle (`key="fast_convert"`, read by tab 1's `_convert`) and a
-  *Clear CUDA memory* button (`ollama_client.unload_all`).
+  language and the template live in the main panel, next to the work they affect.
+- **Advanced options** (`st.expander`, collapsed) holds a *Clear CUDA memory*
+  button (`ollama_client.unload_all`).
 - Section labels are ALL-CAPS `st.caption()` (MODELL / SPRACHE / VORLAGE) above
   `label_visibility="collapsed"` selectboxes.
-- **In Markdown umwandeln** and **Zusammenfassen** are `type="primary"` (filled green).
-  Summary downloads are `use_container_width=True` in a 3-column row.
-- Markdown and summary render inside `st.container(border=True)`.
+- **Zusammenfassen** is `type="primary"` (filled green). Summary downloads are
+  `use_container_width=True` in a 3-column row.
+- The summary renders inside `st.container(border=True)`.
 - The language, exit and logout buttons use `key="lang_btn"` / `key="exit_btn"` /
   `key="logout_btn"`, which the CSS targets via `.st-key-*` to give them a boxed
   style instead of the transparent sidebar-nav look. Exit SIGTERMs the app's own

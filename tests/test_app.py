@@ -20,6 +20,9 @@ FAKE_MODELS = [
 
 GAST_PW = "gast-test-pw"
 
+# A tiny upload for the file_uploader; agent.run is stubbed, so bytes are opaque.
+SAMPLE_UPLOAD = ("report.pdf", b"%PDF-1.4 dummy", "application/pdf")
+
 
 @pytest.fixture
 def anon(monkeypatch, tmp_path):
@@ -59,7 +62,7 @@ def test_signed_out_app_shows_only_the_login_form(anon):
 def test_valid_credentials_sign_in(anon):
     at = _sign_in(anon, "Gast", GAST_PW)
     assert at.session_state["user"] == "Gast"
-    assert [t.label for t in at.tabs] == ["1 · Umwandeln", "2 · Zusammenfassen"]
+    assert any(b.label == "Zusammenfassen" for b in at.button)
 
 
 def test_invalid_credentials_are_rejected(anon):
@@ -69,12 +72,12 @@ def test_invalid_credentials_are_rejected(anon):
 
 
 def test_logout_clears_the_session(at):
-    at.session_state["markdown"] = "# Hi"
+    at.session_state["summary"] = "## Overview\nHi"
     at.run()
     next(b for b in at.button if b.label == "Abmelden").click().run()
     assert "user" not in at.session_state
-    assert "markdown" not in at.session_state
-    assert not at.tabs
+    assert "summary" not in at.session_state
+    assert at.text_input[0].label == "Benutzername"
 
 
 def test_stars():
@@ -94,64 +97,35 @@ def test_theme_css_available_to_ui():
     assert "<style>" in app.theme.build_css()
 
 
-def test_two_tabs(at):
-    assert [t.label for t in at.tabs] == ["1 · Umwandeln", "2 · Zusammenfassen"]
+def test_single_window_has_no_tabs(at):
+    assert not at.tabs
 
 
 def test_sidebar_selects_only_a_model(at):
-    """Language and template moved into the summarize tab."""
+    """Language and template live in the main panel, not the sidebar."""
     labels = [s.label for s in at.sidebar.selectbox]
     assert labels == ["Modell"]
 
 
-def test_summarize_tab_offers_language_and_template(at):
+def test_main_panel_offers_language_and_template(at):
     labels = [s.label for s in at.selectbox]
     assert "Sprache der Zusammenfassung" in labels
     assert "Vorlage" in labels
 
 
-def test_summary_source_defaults_to_upload_when_step1_is_empty(at):
-    """With no converted Markdown yet, step 2 falls back to its own .md upload."""
-    assert at.radio[0].value == i18n.t("source_upload", "de")
-
-
-def test_summary_source_hints_when_step1_is_chosen_but_empty(at):
-    at.radio[0].set_value(i18n.t("source_step1", "de")).run()
-    assert at.info[0].value.startswith("Wandeln Sie zuerst in Schritt 1")
-
-
-def test_summary_source_defaults_to_step1_markdown(at):
-    at.session_state["markdown"] = "# Hi"
-    at.run()
-    assert at.radio[0].value == i18n.t("source_step1", "de")
-    assert not at.info
-
-
-def test_summarize_disabled_without_a_source(at):
+def test_summarize_disabled_without_an_upload(at):
     button = next(b for b in at.button if b.label == "Zusammenfassen")
     assert button.disabled
 
 
-def test_summarize_enabled_with_step1_markdown(at):
-    at.session_state["markdown"] = "# Hi"
-    at.run()
+def test_summarize_enabled_after_an_upload(at):
+    at.file_uploader[0].set_value(SAMPLE_UPLOAD).run()
     button = next(b for b in at.button if b.label == "Zusammenfassen")
     assert not button.disabled
 
 
-def test_convert_button_disabled_without_upload(at):
-    button = next(b for b in at.button if b.label == "In Markdown umwandeln")
-    assert button.disabled
-
-
-def test_step1_offers_a_markdown_download(at):
-    at.session_state["markdown"] = "# Hi"
-    at.run()
-    assert any(d.label == ".md herunterladen" for d in at.download_button)
-
-
-def test_summarize_runs_on_markdown_without_reconverting(at, monkeypatch):
-    """Step 2 summarizes text directly; it must never re-run file conversion."""
+def test_summarize_converts_and_summarizes_in_one_pass(at, monkeypatch):
+    """One click converts the file (fast/plain) and summarizes it."""
     calls = {}
 
     def fake_run(**kwargs):
@@ -159,15 +133,25 @@ def test_summarize_runs_on_markdown_without_reconverting(at, monkeypatch):
         return "## Overview\nDone."
 
     monkeypatch.setattr("src.agent.run", fake_run)
-    at.session_state["markdown"] = "# Source doc"
-    at.session_state["stem"] = "report"
-    at.run()
+    at.file_uploader[0].set_value(SAMPLE_UPLOAD).run()
     next(b for b in at.button if b.label == "Zusammenfassen").click().run()
 
-    assert calls["text"] == "# Source doc"
-    assert "data" not in calls and "filename" not in calls
+    assert calls["filename"] == "report.pdf"
+    assert calls["data"] == b"%PDF-1.4 dummy"
+    assert calls["fast"] is True
+    assert "text" not in calls
     assert at.session_state["summary"] == "## Overview\nDone."
-    assert {d.label for d in at.download_button} >= {
+    assert {d.label for d in at.download_button} == {
+        ".md herunterladen",
+        ".docx herunterladen",
+        ".pdf herunterladen",
+    }
+
+
+def test_downloads_render_from_a_stored_summary(at):
+    at.session_state["summary"] = "## Overview\nHi"
+    at.run()
+    assert {d.label for d in at.download_button} == {
         ".md herunterladen",
         ".docx herunterladen",
         ".pdf herunterladen",
@@ -185,7 +169,7 @@ def test_gui_language_defaults_to_german(at):
 def test_toggle_button_switches_the_gui_to_english(at):
     at = next(b for b in at.sidebar.button if b.key == "lang_btn").click().run()
     assert at.session_state["ui_lang"] == "en"
-    assert [t.label for t in at.tabs] == ["1 · Convert", "2 · Summarize"]
+    assert any(b.label == "Summarize" for b in at.button)
     assert next(b for b in at.sidebar.button if b.key == "lang_btn").label == "🌐 Deutsch"
 
 
@@ -193,18 +177,16 @@ def test_english_gui_translates_every_surface(at_en):
     assert [s.label for s in at_en.sidebar.selectbox] == ["Model"]
     assert {"Summary language", "Template"} <= {s.label for s in at_en.selectbox}
     assert any(b.label == "Summarize" for b in at_en.button)
-    assert any(b.label == "Convert to Markdown" for b in at_en.button)
     assert any(b.label == "Exit app" for b in at_en.button)
-    assert at_en.radio[0].value == i18n.t("source_upload", "en")
 
 
 def test_toggle_survives_logout(at_en):
     """A shared machine keeps the chosen language, but drops the user's data."""
-    at_en.session_state["markdown"] = "# Hi"
+    at_en.session_state["summary"] = "## Overview\nHi"
     at_en.run()
     at_en = next(b for b in at_en.button if b.label == "Logout").click().run()
     assert "user" not in at_en.session_state
-    assert "markdown" not in at_en.session_state
+    assert "summary" not in at_en.session_state
     assert at_en.session_state["ui_lang"] == "en"
     assert at_en.text_input[0].label == "Username"
 
@@ -213,8 +195,7 @@ def test_summarize_passes_the_gui_language_to_the_agent(at_en, monkeypatch):
     """Progress labels are built in the agent layer, so it needs the GUI language."""
     calls = {}
     monkeypatch.setattr("src.agent.run", lambda **kw: calls.update(kw) or "# ok")
-    at_en.session_state["markdown"] = "# Source doc"
-    at_en.run()
+    at_en.file_uploader[0].set_value(SAMPLE_UPLOAD).run()
     next(b for b in at_en.button if b.label == "Summarize").click().run()
     assert calls["ui_lang"] == "en"
 

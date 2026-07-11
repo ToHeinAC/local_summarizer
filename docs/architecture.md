@@ -12,13 +12,14 @@ the same way `models.py` already queries `GET /api/tags` over `urllib`.
 1. **UI (`app.py`, `theme.py`, `auth.py`, `i18n.py`)** — Streamlit, German by
    default with an English toggle (see [ui.md](ui.md)), gated by a sign-in form
    (`auth.verify`, bcrypt hashes in `data/users.json`); nothing renders until a
-   user is in `st.session_state["user"]`. Then two tabs. Tab 1 uploads a document
-   and calls `extract.to_markdown()` to convert it, offering the `.md` as a
-   download. Tab 2 takes that Markdown (or an uploaded `.md`), collects language
-   and template, and calls `agent.run(text=...)`. The sidebar holds only the
-   model selector and the safe exit button. `theme.py` holds the Forest palette
-   and the injectable CSS. Calls `extract`, `agent.run()` and `export.*`; never
-   imports LangChain. See [ui.md](ui.md).
+   user is in `st.session_state["user"]`. Then a single window: the main panel
+   collects the summary language, the template, and the uploaded document, and
+   one **Zusammenfassen** button calls `agent.run(filename=..., data=...,
+   fast=True)` — conversion runs *inside* that call, so the UI never touches
+   `extract` directly. The sidebar holds the model selector, an Advanced-options
+   expander, and the safe exit button. `theme.py` holds the Forest palette and
+   the injectable CSS. Calls `agent.run()` and `export.*`; never imports
+   LangChain. See [ui.md](ui.md).
 2. **Agent (`agent.py`, `tools.py`)** — the LangGraph state machine and the
    LangChain Ollama chat client. See [agent.md](agent.md).
 3. **Ingestion (`extract.py`, `md_convert.py`, `ollama_client.py`)** — file
@@ -29,35 +30,28 @@ the same way `models.py` already queries `GET /api/tags` over `urllib`.
 
 ## Data flow
 ```
-TAB 1  uploaded file (pdf/docx/txt/md)
+uploaded file (pdf/docx/txt/md) + language/template/model
         │
         ▼
-extract.to_markdown(filename, data, ocr_model, rewrite_model, dpi, host,
-                    on_progress)
-        │  └─ md_convert: per PDF page → rewrite | OCR
-        ▼
-Markdown ──► download .md  +  session_state["markdown"]
-
-TAB 2  session Markdown (default) or uploaded .md, + language/template/model
-        │
-        ▼
-agent.run(text, template_id, model_id, target_language, host, on_progress)
-        │  ingest → chunk → map → reduce → finalize
+agent.run(filename, data, fast=True, template_id, model_id,
+          target_language, host, ocr_model, rewrite_model, pdf_dpi, on_progress)
+        │  ingest ─ extract.to_markdown(..., fast=True)
+        │             └─ md_convert: per PDF page → verbatim text | OCR
+        │  → chunk → map → reduce → finalize
         ▼
 Markdown summary ──► export.to_{markdown,pdf,docx} ──► download buttons
 ```
-Because the UI converts up front, `agent.run()` is called with `text=` and its
-ingest node does no file conversion. The file-based path (`filename`/`data`)
-remains supported for direct API use and is covered by tests.
+The UI passes the raw file to `agent.run()`; the ingest node converts it (with
+`fast=True`, so digital pages are used verbatim). The `text=` path — a
+pre-converted string with no file conversion — remains supported for direct API
+use and is covered by tests.
 
 ## Progress reporting
-Two callbacks, one per step. Conversion reports
-`on_progress(done, total, label)` straight to tab 1's progress bar.
-Summarization reports `on_progress(fraction, label)` into `agent.run()`; the
-graph forwards it via the run config (`configurable.on_progress`) and each node
-calls it. When `agent.run()` *is* given a file, `_ingest` maps the converter's
-`(done, total)` into its own `0.0 … INGEST_SHARE` band. This keeps Streamlit
-objects out of both the agent and ingestion layers.
+One callback for the whole run. `agent.run()` receives
+`on_progress(fraction, label)`; the graph forwards it via the run config
+(`configurable.on_progress`) and each node calls it. In the ingest node,
+`_ingest` maps the converter's `(done, total)` into its own `0.0 … INGEST_SHARE`
+band. This keeps Streamlit objects out of both the agent and ingestion layers.
 
 ## Configuration
 `config.py` loads `.env` via `python-dotenv`: `OLLAMA_HOST`, `APP_PORT`, the

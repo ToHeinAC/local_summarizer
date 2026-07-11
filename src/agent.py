@@ -40,6 +40,7 @@ class SummaryState(TypedDict, total=False):
     ocr_model: str
     rewrite_model: str
     pdf_dpi: int
+    fast: bool
     chunks: list[str]
     chunk_summaries: list[str]
     summary: str
@@ -93,6 +94,7 @@ def _ingest(state: SummaryState, config) -> dict:
             host=state.get("host"),
             on_progress=on_convert,
             lang=lang,
+            fast=state.get("fast", False),
         )
     if not text.strip():
         raise ValueError(t("no_text", lang))
@@ -183,13 +185,15 @@ def run(
     ocr_model: str = "deepseek-ocr:3b",
     rewrite_model: str = "gemma4:e4b",
     pdf_dpi: int = 150,
+    fast: bool = False,
     on_progress: Optional[ProgressFn] = None,
     ui_lang: str = DEFAULT_LANG,
 ) -> str:
     """Summarize a document and return Markdown.
 
     Provide either ``text`` or (``filename`` and ``data``). Files are converted
-    to Markdown first; scanned PDF pages are OCR'd with ``ocr_model``.
+    to Markdown first; scanned PDF pages are OCR'd with ``ocr_model``. ``fast``
+    skips the per-page LLM rewrite for digital PDF pages (verbatim text layer).
     ``ui_lang`` is the GUI language of the progress labels; the summary's own
     language is ``target_language``.
     """
@@ -205,6 +209,7 @@ def run(
         "ocr_model": ocr_model,
         "rewrite_model": rewrite_model,
         "pdf_dpi": pdf_dpi,
+        "fast": fast,
     }
     config = {"configurable": {"on_progress": on_progress}}
     result = build_graph().invoke(state, config=config)

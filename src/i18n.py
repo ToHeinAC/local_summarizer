@@ -31,8 +31,6 @@ LANGUAGE_NAMES: dict[str, dict[str, str]] = {
 STRINGS: dict[str, dict[str, str]] = {
     # --- shell -------------------------------------------------------------
     "app_title": {"de": "KI-Zusammenfassung", "en": "AI Summarizer"},
-    "tab_convert": {"de": "1 · Umwandeln", "en": "1 · Convert"},
-    "tab_summarize": {"de": "2 · Zusammenfassen", "en": "2 · Summarize"},
     # --- sign-in -----------------------------------------------------------
     "sign_in_hint": {"de": "Zum Fortfahren anmelden", "en": "Sign in to continue"},
     "username": {"de": "Benutzername", "en": "Username"},
@@ -62,56 +60,27 @@ STRINGS: dict[str, dict[str, str]] = {
     "shutting_down": {"de": "Wird beendet…", "en": "Shutting down…"},
     "logout": {"de": "Abmelden", "en": "Logout"},
     "advanced_options": {"de": "Erweiterte Optionen", "en": "Advanced options"},
-    "fast_convert": {
-        "de": "Schnelle Umwandlung (ohne LLM)",
-        "en": "Fast conversion (skip LLM)",
-    },
-    "fast_convert_help": {
-        "de": (
-            "Für digitale PDFs mit Textebene: übernimmt den extrahierten Text "
-            "direkt statt ihn pro Seite per LLM zu formatieren. Nahezu sofort und "
-            "wortgetreu; einfacheres Markdown, gescannte Seiten brauchen weiter OCR."
-        ),
-        "en": (
-            "For digital PDFs with a text layer: uses the extracted text directly "
-            "instead of an LLM rewrite per page. Near-instant and byte-exact; "
-            "plainer Markdown, scanned pages still need OCR."
-        ),
-    },
     "clear_vram": {"de": "CUDA-Speicher leeren", "en": "Clear CUDA memory"},
     "vram_cleared": {
         "de": "{n} Modell(e) aus dem VRAM entladen.",
         "en": "Unloaded {n} model(s) from VRAM.",
     },
     "vram_empty": {"de": "Keine Modelle geladen.", "en": "No models were loaded."},
-    # --- tab 1: convert ----------------------------------------------------
-    "convert_hint": {
+    # --- main panel: upload & summarize ------------------------------------
+    "intro_hint": {
         "de": (
-            "Dokumente werden zuerst in Markdown umgewandelt; "
+            "Modell, Sprache und Vorlage wählen, ein Dokument hochladen und "
+            "zusammenfassen. Der Text wird direkt ausgelesen (ohne LLM-Formatierung); "
             "gescannte PDF-Seiten werden lokal per OCR gelesen."
         ),
-        "en": "Documents are converted to Markdown first; scanned PDF pages are OCR'd locally.",
+        "en": (
+            "Choose model, language and template, upload a document, and summarize. "
+            "Text is read directly (no LLM formatting); scanned PDF pages are OCR'd locally."
+        ),
     },
     "upload_document": {"de": "Dokument hochladen", "en": "Upload a document"},
-    "convert_button": {"de": "In Markdown umwandeln", "en": "Convert to Markdown"},
-    "conversion_failed": {
-        "de": "Konvertierung fehlgeschlagen: {error}",
-        "en": "Conversion failed: {error}",
-    },
     "download_format": {"de": ".{fmt} herunterladen", "en": "Download .{fmt}"},
     "default_stem": {"de": "dokument", "en": "document"},
-    # --- tab 2: summarize --------------------------------------------------
-    "source_label": {"de": "Quelle", "en": "Source"},
-    "source_step1": {"de": "Markdown aus Schritt 1", "en": "Markdown from step 1"},
-    "source_upload": {"de": ".md-Datei hochladen", "en": "Upload a .md file"},
-    "step1_hint": {
-        "de": (
-            "Wandeln Sie zuerst in Schritt 1 ein Dokument um, "
-            "oder laden Sie hier eine `.md`-Datei hoch."
-        ),
-        "en": "Convert a document in step 1 first, or upload a `.md` file here.",
-    },
-    "upload_markdown": {"de": "Markdown-Datei hochladen", "en": "Upload a Markdown file"},
     "language_caption": {"de": "SPRACHE", "en": "LANGUAGE"},
     "language_label": {"de": "Sprache der Zusammenfassung", "en": "Summary language"},
     "template_caption": {"de": "VORLAGE", "en": "TEMPLATE"},

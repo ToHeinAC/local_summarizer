@@ -9,10 +9,11 @@ cuts throughput ~5×; every workload here (6000-char chunks, reduce batches of 8
 finalize) fits well under 8192, so the cap costs no precision.
 
 ## Nodes
-1. **ingest** — `extract.to_markdown()` converts file bytes to Markdown (unless
-   `text` is passed directly); `language.py` detects the source language. Raises
-   `ValueError` on empty documents. Progress `0.0 → INGEST_SHARE` (0.40), driven
-   per PDF page by the converter. See [ingestion.md](ingestion.md).
+1. **ingest** — `extract.to_markdown(..., fast=state["fast"])` converts file
+   bytes to text (unless `text` is passed directly); `language.py` detects the
+   source language. Raises `ValueError` on empty documents. Progress
+   `0.0 → INGEST_SHARE` (0.40), driven per PDF page by the converter.
+   See [ingestion.md](ingestion.md).
 2. **chunk** — `split_text()` splits into overlapping character chunks
    (`CHUNK_SIZE=6000`, `CHUNK_OVERLAP=200`). Progress 0.42.
 3. **map** — summarizes each chunk with `MAP_PROMPT`. Single-chunk documents
@@ -43,15 +44,20 @@ agent.run(
     ocr_model="deepseek-ocr:3b",               # vision model for scanned pages
     rewrite_model="gemma4:e4b",                # text model for digital pages
     pdf_dpi=150,
+    fast=False,                                # True: verbatim text, skip rewrite
     on_progress=lambda frac, label: ...,
     ui_lang="de",                              # language of the progress labels
 ) -> str  # Markdown
 ```
 `model_id` is resolved to an Ollama tag via `models.get_model`. `ocr_model` and
-`rewrite_model` are raw Ollama tags, not registry ids. `ui_lang` (`"de"`/`"en"`)
-only selects the language of the progress labels, which the nodes build with
-`i18n.t`; the summary's own language is `target_language`. It travels in
-`SummaryState["ui_lang"]` and is forwarded to `extract.to_markdown(lang=...)`.
+`rewrite_model` are raw Ollama tags, not registry ids. `fast` travels in
+`SummaryState["fast"]` and `_ingest` forwards it to `extract.to_markdown(fast=...)`:
+with `fast=True` (what the UI passes) digital PDF pages use their text layer
+verbatim and `rewrite_model` goes unused; scanned pages still OCR. See
+[ingestion.md](ingestion.md). `ui_lang` (`"de"`/`"en"`) only selects the language
+of the progress labels, which the nodes build with `i18n.t`; the summary's own
+language is `target_language`. It travels in `SummaryState["ui_lang"]` and is
+forwarded to `extract.to_markdown(lang=...)`.
 
 ## Testing hook
 Nodes call `make_llm`/`run_prompt` from the module namespace, so tests

@@ -7,21 +7,21 @@ German by default and toggles to English** with one sidebar button; the summary
 language is chosen separately, per run (auto-detect by default).
 
 ## Features
-Two steps, one tab each:
+One window, one click. Pick the **summary language** (auto-detect by default) and
+**template**, upload a **PDF, DOCX, TXT, or MD** file, and press
+**Zusammenfassen** (Summarize). That single click:
 
-**1 · Umwandeln** (Convert) — upload **PDF, DOCX, TXT, MD**. The document is **converted to
-Markdown first**; scanned PDF pages (no text layer) are **OCR'd locally** by an
-Ollama vision model — no tesseract, no system binaries. Review the Markdown and
-download it as `.md`.
+1. **converts** the document to plain text — digital PDF pages are used verbatim
+   (near-instant, byte-exact), and scanned pages (no text layer) are **OCR'd
+   locally** by an Ollama vision model — no tesseract, no system binaries; then
+2. **summarizes** it with the chosen local LLM.
 
-**2 · Zusammenfassen** (Summarize) — summarize step 1's Markdown, or upload your own `.md`
-(e.g. a corrected version). Pick **summary language** (auto-detect by default)
-and **template**, then download the summary as **Markdown, PDF, or DOCX**.
+The summary is shown and downloadable as **Markdown, PDF, or DOCX**. There is no
+separate convert step and no intermediate Markdown to manage.
 
 Also: **sign-in** (bcrypt-hashed local user store), a **🌐 language toggle** and
-a **model** picker in the sidebar, live **progress bar** (per page during
-conversion), **Abmelden** (logout), and a safe in-app **App beenden** (exit)
-button.
+a **model** picker in the sidebar, a live **progress bar** across the whole run,
+**Abmelden** (logout), and a safe in-app **App beenden** (exit) button.
 
 ## Requirements
 - Python ≥ 3.12, [`uv`](https://docs.astral.sh/uv/), and [Ollama](https://ollama.com).
@@ -38,9 +38,10 @@ button.
   ollama pull deepseek-ocr:3b   # reads scanned pages
   ```
 
-> **Note:** PDF pages that *do* have a text layer are reformatted as Markdown by
-> one LLM call per page (`REWRITE_MODEL`, default `gemma4:e4b`). For long PDFs
-> set `REWRITE_MODEL=LiquidAI/lfm2.5-1.2b-instruct` to keep it fast.
+> **Note:** the UI reads digital PDF pages verbatim (no LLM call per page), so
+> only scanned pages need the OCR model. The optional per-page Markdown rewrite
+> (`REWRITE_MODEL`, default `gemma4:e4b`) remains available to direct API callers
+> via `agent.run(fast=False)`.
 
 ## Setup & run
 ```bash

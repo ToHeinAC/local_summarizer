@@ -2,7 +2,7 @@
 
 Run: `uv run pytest`. Tests are fully offline — the summarizer LLM, the
 conversion/OCR calls, and the model-availability query are monkeypatched, so no
-Ollama server is required. 111 tests total (well under the 200 cap).
+Ollama server is required. 110 tests total (well under the 200 cap).
 
 | File | Covers |
 |---|---|
@@ -14,10 +14,10 @@ Ollama server is required. 111 tests total (well under the 200 cap).
 | `test_language.py` | English/German detection, fallbacks |
 | `test_models.py` | registry shape, default, availability annotation, unreachable server |
 | `test_templates.py` | registry shape, default, unknown id |
-| `test_agent.py` | chunk split, single-pass vs map-reduce, progress monotonicity, Markdown-first ingest, language resolution, empty input |
+| `test_agent.py` | chunk split, single-pass vs map-reduce, progress monotonicity, Markdown-first ingest, `fast=True` skips the per-page rewrite, language resolution, empty input |
 | `test_export.py` | md/docx/pdf output validity, unicode, exporters registry |
 | `test_auth.py` | env-seeded store, hashed (never plaintext) storage, wrong password, unknown user, missing seed, corrupt/missing store |
-| `test_app.py` | UI helpers, accepted formats, config wiring, theme availability, the GUI-language toggle, and the two-tab workflow driven through `AppTest` |
+| `test_app.py` | UI helpers, accepted formats, config wiring, theme availability, the GUI-language toggle, and the single-window upload→summary flow driven through `AppTest` |
 | `test_i18n.py` | catalogue key/placeholder parity across languages, `t` formatting + fallback, `pick` |
 
 ## UI tests
@@ -29,10 +29,12 @@ login form (no tabs); valid credentials sign in, invalid ones error, and
 **Abmelden** clears the session. Widget labels are asserted in German (the
 default). Clicking `lang_btn` must flip `session_state["ui_lang"]`, relabel every
 surface in English, survive Logout, and reach `agent.run(ui_lang=...)`.
-`i18n.LANGUAGE_NAMES` is checked to cover every `LANGUAGE_LABELS` code. It also asserts the tab labels, that the sidebar exposes only the model selector, that language and
-template live in tab 2, the radio's default source, button disabled-states, and
-that clicking **Zusammenfassen** calls `agent.run(text=...)` with no file arguments —
-i.e. step 2 never re-runs conversion.
+`i18n.LANGUAGE_NAMES` is checked to cover every `LANGUAGE_LABELS` code. It also
+asserts that there are no tabs, that the sidebar exposes only the model selector,
+that language and template live in the main panel, the **Zusammenfassen**
+disabled-state (until a file is uploaded via `file_uploader.set_value`), and that
+clicking it calls `agent.run(filename=..., data=..., fast=True)` with no `text=`
+argument — i.e. the single click converts and summarizes in one pass.
 
 ## Fixtures (`conftest.py`)
 In-memory sample documents (`txt_bytes`, `md_bytes`, `docx_bytes`, `pdf_bytes`,
