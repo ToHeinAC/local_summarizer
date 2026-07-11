@@ -14,7 +14,7 @@ Layered. LangChain/LangGraph are confined to the **agent layer**
 `ollama_client.py` uses the plain `ollama` package, not LangChain.
 
 ```
-app.py ─ Streamlit UI: login gate, single window, progress, downloads, exit  (no LangChain)
+app.py ─ Streamlit UI: login gate, single window, progress, downloads, logout  (no LangChain)
   ├─ auth.py        bcrypt user store (data/users.json)
   ├─ i18n.py        German (default) / English UI strings
   ├─ theme.py       Forest palette + injected CSS
@@ -52,7 +52,7 @@ of the agent and ingestion layers. Details: [docs/architecture.md](docs/architec
 ## Module map
 | Module | Role | Docs |
 |---|---|---|
-| `src/app.py` | Streamlit UI: login gate, single upload→summary window, sidebar, exit | [ui](docs/ui.md) |
+| `src/app.py` | Streamlit UI: login gate, single upload→summary window, sidebar, logout | [ui](docs/ui.md) |
 | `src/auth.py` | bcrypt user store + `verify()` | [ui](docs/ui.md) |
 | `src/i18n.py` | German/English UI strings, `t()` / `pick()` | [ui](docs/ui.md) |
 | `src/theme.py` | Forest palette + injectable CSS | [ui](docs/ui.md) |
@@ -150,8 +150,10 @@ tunnel has registered. Ported from
 **Persistence.** The app and the tunnel are started with `setsid nohup`, so they
 get their own session *and* ignore `SIGHUP`; closing the terminal leaves both
 running. The script itself returns as soon as the URL is printed. A detached
-watchdog stops the tunnel once port 8530 stops listening, so the in-app exit
-button still tears the whole thing down. `./tunnel.sh stop` kills both.
+watchdog stops the tunnel once port 8530 stops listening. The UI has **no** exit
+button precisely because it would trip that watchdog and drop the public URL;
+Logout only clears the session, leaving the app and tunnel up. `./tunnel.sh stop`
+kills both.
 
 `setsid` alone is not enough: it removes the controlling terminal but leaves
 `SIGHUP` at its default action, so anything that signals the process group still

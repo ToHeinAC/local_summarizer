@@ -17,7 +17,7 @@ the same way `models.py` already queries `GET /api/tags` over `urllib`.
    the summary language and the template, and one **Zusammenfassen** button calls
    `agent.run(filename=..., data=..., fast=...)` — conversion runs *inside* that
    call, so the UI never touches `extract` directly. The sidebar holds only an
-   Advanced-options expander and the language/exit/logout button row. `theme.py` holds the Forest palette and
+   Advanced-options expander and the language/logout buttons. `theme.py` holds the Forest palette and
    the injectable CSS. Calls `agent.run()` and `export.*`; never imports
    LangChain. See [ui.md](ui.md).
 2. **Agent (`agent.py`, `tools.py`)** — the LangGraph state machine and the

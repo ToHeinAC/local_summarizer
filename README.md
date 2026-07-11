@@ -7,21 +7,26 @@ German by default and toggles to English** with one sidebar button; the summary
 language is chosen separately, per run (auto-detect by default).
 
 ## Features
-One window, one click. Pick the **summary language** (auto-detect by default) and
+One window, one click. In the main panel pick the **model** and a **precision**
+mode (*Schnellmodus* — fast/verbatim, the default — or *Genaues Markdown* —
+precise, LLM-formatted), the **summary language** (auto-detect by default) and
 **template**, upload a **PDF, DOCX, TXT, or MD** file, and press
 **Zusammenfassen** (Summarize). That single click:
 
-1. **converts** the document to plain text — digital PDF pages are used verbatim
-   (near-instant, byte-exact), and scanned pages (no text layer) are **OCR'd
-   locally** by an Ollama vision model — no tesseract, no system binaries; then
+1. **converts** the document to text — by default digital PDF pages are used
+   verbatim (near-instant, byte-exact) and scanned pages (no text layer) are
+   **OCR'd locally** by an Ollama vision model (no tesseract, no system
+   binaries); the *precise* option instead LLM-formats each text page; then
 2. **summarizes** it with the chosen local LLM.
 
 The summary is shown and downloadable as **Markdown, PDF, or DOCX**. There is no
 separate convert step and no intermediate Markdown to manage.
 
-Also: **sign-in** (bcrypt-hashed local user store), a **🌐 language toggle** and
-a **model** picker in the sidebar, a live **progress bar** across the whole run,
-**Abmelden** (logout), and a safe in-app **App beenden** (exit) button.
+Also: **sign-in** (bcrypt-hashed local user store), a **🌐 language toggle** in
+the sidebar, and a live **progress bar** across the whole run. **Abmelden**
+(logout) clears the session but leaves the app — and any live tunnel — running;
+there is no in-app exit button, so stop the server from the terminal
+(`./tunnel.sh stop`) to avoid tearing a tunnel down unexpectedly.
 
 ## Requirements
 - Python ≥ 3.12, [`uv`](https://docs.astral.sh/uv/), and [Ollama](https://ollama.com).
@@ -38,10 +43,10 @@ a **model** picker in the sidebar, a live **progress bar** across the whole run,
   ollama pull deepseek-ocr:3b   # reads scanned pages
   ```
 
-> **Note:** the UI reads digital PDF pages verbatim (no LLM call per page), so
-> only scanned pages need the OCR model. The optional per-page Markdown rewrite
-> (`REWRITE_MODEL`, default `gemma4:e4b`) remains available to direct API callers
-> via `agent.run(fast=False)`.
+> **Note:** by default the UI reads digital PDF pages verbatim (no LLM call per
+> page), so only scanned pages need the OCR model. The per-page Markdown rewrite
+> (`REWRITE_MODEL`, default `gemma4:e4b`) runs only for the *precise* option (and
+> direct API callers) via `agent.run(fast=False)`.
 
 ## Setup & run
 ```bash
@@ -69,7 +74,8 @@ is re-seeded; to change the accounts themselves, edit `auth.SEED_USERS`.
 ```
 Starts the app if it isn't running, then opens a temporary `*.trycloudflare.com`
 public URL for port 8530 — no Cloudflare account required. The tunnel stays up
-until port 8530 stops listening (or Ctrl-C). Requires
+until port 8530 stops listening; run `./tunnel.sh stop` to shut down both the app
+and the tunnel. Requires
 [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/).
 
 ## Tests

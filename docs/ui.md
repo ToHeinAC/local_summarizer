@@ -64,11 +64,11 @@ The current language lives in `st.session_state["ui_lang"]` (default `"de"`,
 read by `app._ui_lang()`). `app._language_toggle(container)` renders one button
 (`key="lang_btn"`) into the container it's given, labelled with the *other*
 language — `🌐 English` while in German — which flips the state and reruns. When
-signed in it sits in the sidebar's bottom 3-column row beside **App beenden** and
-**Abmelden**; the same button is also drawn under the login form, so an anonymous
-visitor can switch before signing in. **Logout
-preserves `ui_lang`** while `st.session_state.clear()` drops everything else, so
-the next user on a shared machine keeps the chosen language but inherits no data.
+signed in it sits at the bottom of the sidebar, directly above **Abmelden**; the
+same button is also drawn under the login form, so an anonymous visitor can switch
+before signing in. **Logout preserves `ui_lang`** while `st.session_state.clear()`
+drops everything else, so the chosen language survives a logout while nothing else
+does.
 
 Progress-bar labels are built in `agent.py` and `md_convert.py`, which are below
 the UI layer, so the language is passed down explicitly: `agent.run(ui_lang=...)`
@@ -95,10 +95,13 @@ the language toggle; a bad credential pair renders `st.error`. `st.stop()` ends 
 else is ever rendered to an anonymous visitor. Same shape as the reference repo.
 
 On success the username goes into `st.session_state["user"]` and the script
-reruns. The sidebar then ends with `Angemeldet als **<user>**` and two equal
-boxed buttons, **App beenden** (`key="exit_btn"`) and **Abmelden**
-(`key="logout_btn"`). Abmelden calls `st.session_state.clear()`, which also drops the summary,
-so a shared machine leaks nothing to the next user. Passwords
+reruns. The sidebar then ends with `Angemeldet als **<user>**`, the language
+toggle, and one boxed **Abmelden** button (`key="logout_btn"`). Logout is
+optional — Abmelden simply calls `st.session_state.clear()` (dropping the summary)
+and reruns; it kills no process, so the app (and any Cloudflare tunnel in front of
+it) stays alive. There is deliberately **no in-app exit button**: SIGTERMing the
+app would trip `tunnel.sh`'s watchdog and tear down the public URL. Stop the app
+from the terminal (`./tunnel.sh stop`). Passwords
 live as bcrypt hashes in `data/users.json`, seeded once from the `SEED_PW_*`
 variables in `.env` (see [../src/auth.py](../src/auth.py)). A missing seed raises,
 and `main()` renders that as an `st.error` instead of a traceback.
@@ -137,9 +140,9 @@ no intermediate Markdown preview or `.md`/original-text download. `summary` /
 - `layout="wide"`, sidebar `expanded`.
 - Sidebar title `## 📝 KI-Zusammenfassung`, then `---` dividers. The sidebar holds
   only the **Advanced options** expander and, at the bottom, the signed-in caption
-  above three stacked full-width buttons: the GUI-language toggle, then **Abmelden**,
-  then **App beenden**. Everything else — the model selector, the *summary* language
-  and the template — lives in the main panel, next to the work it affects.
+  above two stacked full-width buttons: the GUI-language toggle, then **Abmelden**.
+  Everything else — the model selector, the *summary* language and the template —
+  lives in the main panel, next to the work it affects.
 - **Advanced options** (`st.expander`, collapsed) holds a *Clear CUDA memory*
   button (`ollama_client.unload_all`).
 - Section labels are ALL-CAPS `st.caption()` (MODELL / PRÄZISION / SPRACHE /
@@ -147,9 +150,8 @@ no intermediate Markdown preview or `.md`/original-text download. `summary` /
 - **Zusammenfassen** is `type="primary"` (filled green). Summary downloads are
   `use_container_width=True` in a 3-column row.
 - The summary renders inside `st.container(border=True)`.
-- The language, exit and logout buttons use `key="lang_btn"` / `key="exit_btn"` /
-  `key="logout_btn"`, which the CSS targets via `.st-key-*` to give them a boxed
-  style instead of the transparent sidebar-nav look (the CSS also forces them
-  `width: 100%`). All three are full-width buttons stacked on their own lines,
-  top to bottom: language toggle, **Abmelden**, **App beenden**. Exit SIGTERMs the
-  app's own PID only.
+- The language and logout buttons use `key="lang_btn"` / `key="logout_btn"`, which
+  the CSS targets via `.st-key-*` to give them a boxed style instead of the
+  transparent sidebar-nav look (the CSS also forces them `width: 100%`). Both are
+  full-width buttons stacked on their own lines: language toggle, then **Abmelden**.
+  There is no exit button — see the sign-in gate note on why (tunnel preservation).

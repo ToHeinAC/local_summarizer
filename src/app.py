@@ -15,7 +15,6 @@ Run: uv run streamlit run src/app.py --server.port 8530
 from __future__ import annotations
 
 import os
-import signal
 
 import streamlit as st
 
@@ -88,15 +87,14 @@ def _sidebar(lang: str) -> None:
 
     st.sidebar.markdown("---")
     st.sidebar.caption(t("signed_in_as", lang, user=st.session_state["user"]))
-    _language_toggle(st.sidebar)  # full-width, above the stacked logout/exit
+    _language_toggle(st.sidebar)  # full-width, above logout
+    # Logout only clears session state (no process kill), so the app process —
+    # and any Cloudflare tunnel in front of it — stays alive for the next user.
     if st.sidebar.button(t("logout", lang), key="logout_btn"):
         lang = st.session_state.get("ui_lang", DEFAULT_LANG)
         st.session_state.clear()  # drop the signed-in user and their documents
         st.session_state["ui_lang"] = lang  # but keep the chosen GUI language
         st.rerun()
-    if st.sidebar.button(t("exit_app", lang), key="exit_btn"):
-        st.sidebar.info(t("shutting_down", lang))
-        os.kill(os.getpid(), signal.SIGTERM)
 
 
 def _model_selector(container, lang: str) -> dict:

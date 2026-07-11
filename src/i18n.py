@@ -56,8 +56,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "`{tag}` is not installed. Run: `ollama pull {tag}`",
     },
     "signed_in_as": {"de": "Angemeldet als **{user}**", "en": "Signed in as **{user}**"},
-    "exit_app": {"de": "App beenden", "en": "Exit app"},
-    "shutting_down": {"de": "Wird beendet…", "en": "Shutting down…"},
     "logout": {"de": "Abmelden", "en": "Logout"},
     "advanced_options": {"de": "Erweiterte Optionen", "en": "Advanced options"},
     "clear_vram": {"de": "CUDA-Speicher leeren", "en": "Clear CUDA memory"},
@@ -68,15 +66,8 @@ STRINGS: dict[str, dict[str, str]] = {
     "vram_empty": {"de": "Keine Modelle geladen.", "en": "No models were loaded."},
     # --- main panel: upload & summarize ------------------------------------
     "intro_hint": {
-        "de": (
-            "Modell, Sprache und Vorlage wählen, ein Dokument hochladen und "
-            "zusammenfassen. Der Text wird direkt ausgelesen (ohne LLM-Formatierung); "
-            "gescannte PDF-Seiten werden lokal per OCR gelesen."
-        ),
-        "en": (
-            "Choose model, language and template, upload a document, and summarize. "
-            "Text is read directly (no LLM formatting); scanned PDF pages are OCR'd locally."
-        ),
+        "de": "Modell, Sprache und Vorlage wählen, ein Dokument hochladen und zusammenfassen.",
+        "en": "Choose model, language and template, upload a document, and summarize.",
     },
     "upload_document": {"de": "Dokument hochladen", "en": "Upload a document"},
     "precision_caption": {"de": "PRÄZISION", "en": "PRECISION"},

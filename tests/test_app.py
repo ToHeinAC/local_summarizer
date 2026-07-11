@@ -193,7 +193,7 @@ def test_english_gui_translates_every_surface(at_en):
     assert not at_en.sidebar.selectbox
     assert {"Model", "Summary language", "Template"} <= {s.label for s in at_en.selectbox}
     assert any(b.label == "Summarize" for b in at_en.button)
-    assert any(b.label == "Exit app" for b in at_en.button)
+    assert any(b.label == "Logout" for b in at_en.button)
 
 
 def test_toggle_survives_logout(at_en):
