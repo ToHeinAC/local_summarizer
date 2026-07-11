@@ -34,13 +34,15 @@ app.py ─ Streamlit UI: login gate, single window, progress, downloads, exit  (
 Sign-in gates everything: `app.py` calls `auth.verify()` before the window is
 rendered (see [docs/ui.md](docs/ui.md)). One-click flow:
 
-- **Upload & summarize** — pick model (sidebar), summary language and template
-  (main panel), upload a **PDF/DOCX/TXT/MD**, press **Zusammenfassen**. That
-  single click calls `agent.run(filename=…, data=…, fast=True)`: the ingest node
-  converts the file to **plain text** (digital PDF pages verbatim, scanned pages
-  OCR'd by a vision model — no per-page LLM rewrite), detects language, chunks,
-  map-reduces via the selected Ollama model, and finalizes → `export.py` produces
-  the `.md`/`.pdf`/`.docx` download bytes. No intermediate Markdown is shown.
+- **Upload & summarize** — in the main panel pick the model and precision
+  selectbox (quality parameters), upload a **PDF/DOCX/TXT/MD**, then pick summary
+  language and template, press **Zusammenfassen**. That single click calls
+  `agent.run(filename=…, data=…, fast=…)`: the ingest node converts the file to
+  text (`fast=True` → digital PDF pages verbatim; the precise option flips it to
+  `fast=False` → per-page LLM rewrite; scanned pages always OCR'd by a vision
+  model), detects language, chunks, map-reduces via the selected Ollama model, and
+  finalizes → `export.py` produces the `.md`/`.pdf`/`.docx` download bytes. No
+  intermediate Markdown is shown.
 
 The one progress callback threads through the whole run, so Streamlit stays out
 of the agent and ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
@@ -85,15 +87,19 @@ of the agent and ingestion layers. Details: [docs/architecture.md](docs/architec
   needs. See [docs/ui.md](docs/ui.md).
 - **Single-window, one-click flow**: settings (model, summary language,
   template) and the file upload live on one screen; pressing **Zusammenfassen**
-  converts *and* summarizes in a single `agent.run(filename=…, fast=True)` pass.
+  converts *and* summarizes in a single `agent.run(filename=…, fast=…)` pass
+  (`fast=True` by default, `fast=False` when the precise option is selected).
   No separate convert step and no intermediate Markdown to inspect or download —
   the earlier two-tab, download-the-`.md`-first workflow was dropped as friction.
-- **Plain-text conversion (always)**: the UI always converts with `fast=True` —
-  digital PDF pages use their extracted text layer verbatim (zero LLM rewrite
-  calls); scanned pages still OCR. Trade-off: plainer text and raw reading order
-  on multi-column layouts, in exchange for a near-instant, byte-exact conversion.
-  The per-page LLM-rewrite path still exists in `md_convert` (`fast=False`) for
-  direct API callers and tests, but is no longer reachable from the UI.
+- **Plain-text conversion (default) + precision selectbox**: the UI converts with
+  `fast=True` by default — digital PDF pages use their extracted text layer
+  verbatim (zero LLM rewrite calls); scanned pages still OCR. Trade-off: plainer
+  text and raw reading order on multi-column layouts, in exchange for a
+  near-instant, byte-exact conversion. A main-panel selectbox (*Schnellmodus
+  (wörtlich)* by default, or *Genaues Markdown (LLM)*) opts into the per-page
+  LLM-rewrite path (`fast=False`), which formats each text page
+  (headings/lists/tables) without changing wording at the cost of one LLM call
+  per page.
 - **Markdown-first ingestion**: every upload becomes text before
   summarization. PDF pages are routed per page — a text layer ≥ 40 chars is used
   verbatim (or, with `fast=False`, LLM-rewritten with wording preserved);

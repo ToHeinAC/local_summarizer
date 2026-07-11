@@ -101,14 +101,14 @@ def test_single_window_has_no_tabs(at):
     assert not at.tabs
 
 
-def test_sidebar_selects_only_a_model(at):
-    """Language and template live in the main panel, not the sidebar."""
-    labels = [s.label for s in at.sidebar.selectbox]
-    assert labels == ["Modell"]
+def test_sidebar_has_no_selectbox(at):
+    """Model, language and template all live in the main panel now."""
+    assert not at.sidebar.selectbox
 
 
-def test_main_panel_offers_language_and_template(at):
+def test_main_panel_offers_model_language_and_template(at):
     labels = [s.label for s in at.selectbox]
+    assert "Modell" in labels
     assert "Sprache der Zusammenfassung" in labels
     assert "Vorlage" in labels
 
@@ -148,6 +148,22 @@ def test_summarize_converts_and_summarizes_in_one_pass(at, monkeypatch):
     }
 
 
+def test_precision_selectbox_switches_to_the_per_page_rewrite(at, monkeypatch):
+    """Choosing the precise option asks the agent for the LLM-Markdown pass (fast=False)."""
+    calls = {}
+
+    def fake_run(**kwargs):
+        calls.update(kwargs)
+        return "## Overview\nDone."
+
+    monkeypatch.setattr("src.agent.run", fake_run)
+    at.file_uploader[0].set_value(SAMPLE_UPLOAD).run()
+    next(s for s in at.selectbox if s.label == "Präzision").set_value(True).run()
+    next(b for b in at.button if b.label == "Zusammenfassen").click().run()
+
+    assert calls["fast"] is False
+
+
 def test_downloads_render_from_a_stored_summary(at):
     at.session_state["summary"] = "## Overview\nHi"
     at.run()
@@ -174,8 +190,8 @@ def test_toggle_button_switches_the_gui_to_english(at):
 
 
 def test_english_gui_translates_every_surface(at_en):
-    assert [s.label for s in at_en.sidebar.selectbox] == ["Model"]
-    assert {"Summary language", "Template"} <= {s.label for s in at_en.selectbox}
+    assert not at_en.sidebar.selectbox
+    assert {"Model", "Summary language", "Template"} <= {s.label for s in at_en.selectbox}
     assert any(b.label == "Summarize" for b in at_en.button)
     assert any(b.label == "Exit app" for b in at_en.button)
 

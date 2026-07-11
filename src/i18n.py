@@ -79,9 +79,28 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
     },
     "upload_document": {"de": "Dokument hochladen", "en": "Upload a document"},
+    "precision_caption": {"de": "PRÄZISION", "en": "PRECISION"},
+    "precision_label": {"de": "Präzision", "en": "Precision"},
+    "fast_option": {"de": "Schnellmodus (wörtlich)", "en": "Fast mode (verbatim)"},
+    "precise_option": {"de": "Genaues Markdown (LLM)", "en": "Precise Markdown (LLM)"},
+    "llm_format_help": {
+        "de": (
+            "Formatiert jede Textseite vor dem Zusammenfassen per LLM neu "
+            "(Überschriften, Listen, Tabellen), ohne den Wortlaut zu ändern. "
+            "Ein LLM-Aufruf pro Seite — deutlich langsamer. Standardmäßig aus: "
+            "der Text wird verbatim gelesen."
+        ),
+        "en": (
+            "Reformats each text page with the LLM before summarizing "
+            "(headings, lists, tables) without changing the wording. "
+            "One LLM call per page — much slower. Off by default: the text is "
+            "read verbatim."
+        ),
+    },
     "download_format": {"de": ".{fmt} herunterladen", "en": "Download .{fmt}"},
     "default_stem": {"de": "dokument", "en": "document"},
     "language_caption": {"de": "SPRACHE", "en": "LANGUAGE"},
+    "selection_hint": {"de": "Auswahl", "en": "Selection"},
     "language_label": {"de": "Sprache der Zusammenfassung", "en": "Summary language"},
     "template_caption": {"de": "VORLAGE", "en": "TEMPLATE"},
     "template_label": {"de": "Vorlage", "en": "Template"},

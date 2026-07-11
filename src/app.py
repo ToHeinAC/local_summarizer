@@ -74,28 +74,9 @@ def _login_gate() -> None:
     st.stop()
 
 
-def _sidebar(lang: str) -> dict:
+def _sidebar(lang: str) -> None:
     st.sidebar.markdown(f"## 📝 {t('app_title', lang)}")
-    _language_toggle(st.sidebar)
     st.sidebar.markdown("---")
-
-    st.sidebar.caption(t("model_caption", lang))
-    models = annotate_availability(CFG.ollama_host)
-    ids = [m["id"] for m in models]
-    model_id = st.sidebar.selectbox(
-        t("model_label", lang),
-        ids,
-        index=ids.index(DEFAULT_MODEL_ID),
-        format_func=lambda i: pick(next(m["label"] for m in models if m["id"] == i), lang),
-        label_visibility="collapsed",
-    )
-    model = next(m for m in models if m["id"] == model_id)
-    st.sidebar.caption(
-        t("speed_quality", lang, speed=_stars(model["speed"]), quality=_stars(model["quality"]))
-    )
-    st.sidebar.caption(pick(model["note"], lang))
-    if not model["installed"]:
-        st.sidebar.warning(t("not_installed", lang, tag=model["tag"]))
 
     with st.sidebar.expander(t("advanced_options", lang), expanded=False):
         if st.button(t("clear_vram", lang), key="clear_vram_btn"):
@@ -107,17 +88,36 @@ def _sidebar(lang: str) -> dict:
 
     st.sidebar.markdown("---")
     st.sidebar.caption(t("signed_in_as", lang, user=st.session_state["user"]))
-    exit_col, logout_col = st.sidebar.columns(2)
-    if exit_col.button(t("exit_app", lang), key="exit_btn"):
-        st.sidebar.info(t("shutting_down", lang))
-        os.kill(os.getpid(), signal.SIGTERM)
-    if logout_col.button(t("logout", lang), key="logout_btn"):
+    _language_toggle(st.sidebar)  # full-width, above the stacked logout/exit
+    if st.sidebar.button(t("logout", lang), key="logout_btn"):
         lang = st.session_state.get("ui_lang", DEFAULT_LANG)
         st.session_state.clear()  # drop the signed-in user and their documents
         st.session_state["ui_lang"] = lang  # but keep the chosen GUI language
         st.rerun()
+    if st.sidebar.button(t("exit_app", lang), key="exit_btn"):
+        st.sidebar.info(t("shutting_down", lang))
+        os.kill(os.getpid(), signal.SIGTERM)
 
-    return {"model": model}
+
+def _model_selector(container, lang: str) -> dict:
+    """Render the model picker (with its speed/quality stars) into a container."""
+    container.caption(t("model_caption", lang))
+    models = annotate_availability(CFG.ollama_host)
+    ids = [m["id"] for m in models]
+    model_id = container.selectbox(
+        t("model_label", lang),
+        ids,
+        index=ids.index(DEFAULT_MODEL_ID),
+        format_func=lambda i: pick(next(m["label"] for m in models if m["id"] == i), lang),
+        label_visibility="collapsed",
+    )
+    model = next(m for m in models if m["id"] == model_id)
+    container.caption(
+        t("speed_quality", lang, speed=_stars(model["speed"]), quality=_stars(model["quality"]))
+    )
+    if not model["installed"]:
+        container.warning(t("not_installed", lang, tag=model["tag"]))
+    return model
 
 
 def _summary_options(lang: str) -> dict:
@@ -132,6 +132,7 @@ def _summary_options(lang: str) -> dict:
         format_func=lambda c: pick(LANGUAGE_NAMES[c], lang),
         label_visibility="collapsed",
     )
+    left.caption(t("selection_hint", lang))
 
     right.caption(t("template_caption", lang))
     templates = list_templates()
@@ -149,7 +150,7 @@ def _summary_options(lang: str) -> dict:
 
 
 def _run(uploaded, opts: dict, model: dict, lang: str) -> None:
-    """Convert the upload to plain text and summarize it in one pass."""
+    """Convert the upload and summarize it in one pass."""
     bar = st.progress(0.0, text=t("preparing", lang))
 
     def on_progress(fraction: float, label: str) -> None:
@@ -166,7 +167,9 @@ def _run(uploaded, opts: dict, model: dict, lang: str) -> None:
             ocr_model=CFG.ocr_model,
             rewrite_model=CFG.rewrite_model,
             pdf_dpi=CFG.pdf_dpi,
-            fast=True,  # plain-text conversion: no per-page LLM rewrite
+            # fast=True reads text verbatim; the LLM-format toggle flips it to
+            # the per-page rewrite for nicer Markdown (one LLM call per page).
+            fast=not opts["llm_format"],
             on_progress=on_progress,
             ui_lang=lang,
         )
@@ -194,10 +197,31 @@ def _downloads(summary: str, stem: str, lang: str) -> None:
         )
 
 
-def _main_panel(model: dict, lang: str) -> None:
+def _main_panel(lang: str) -> None:
     st.caption(t("intro_hint", lang))
-    opts = _summary_options(lang)
+
+    # Quality parameters: model choice + the precision (LLM-Markdown) step.
+    model_col, precision_col = st.columns(2)
+    model = _model_selector(model_col, lang)
+    precision_col.caption(t("precision_caption", lang))
+    # False = fast (verbatim), True = LLM-rewritten Markdown.
+    llm_format = precision_col.selectbox(
+        t("precision_label", lang),
+        [False, True],
+        index=0,
+        format_func=lambda v: t("precise_option" if v else "fast_option", lang),
+        label_visibility="collapsed",
+        help=t("llm_format_help", lang),
+    )
+    speed, quality = (1, 3) if llm_format else (3, 1)
+    precision_col.caption(
+        t("speed_quality", lang, speed=_stars(speed), quality=_stars(quality))
+    )
+
     uploaded = st.file_uploader(t("upload_document", lang), type=ACCEPTED)
+
+    opts = _summary_options(lang)
+    opts["llm_format"] = llm_format
 
     disabled = uploaded is None or not model["installed"]
     if st.button(t("summarize_button", lang), type="primary", disabled=disabled):
@@ -226,10 +250,10 @@ def main() -> None:
         st.error(t("seed_missing", lang, vars=" / ".join(auth.SEED_USERS.values())))
         st.stop()
     _login_gate()
-    opts = _sidebar(lang)
+    _sidebar(lang)
 
     st.title(t("app_title", lang))
-    _main_panel(opts["model"], lang)
+    _main_panel(lang)
 
 
 if __name__ == "__main__":

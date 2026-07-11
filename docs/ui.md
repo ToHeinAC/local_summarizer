@@ -61,10 +61,12 @@ per-language `label`/`note`/`description` dicts that `models.py` and
 `templates.py` carry next to the data they describe.
 
 The current language lives in `st.session_state["ui_lang"]` (default `"de"`,
-read by `app._ui_lang()`). `app._language_toggle(container)` renders one sidebar
-button (`key="lang_btn"`) labelled with the *other* language — `🌐 English` while
-in German — which flips the state and reruns. The same button is drawn under the
-login form, so an anonymous visitor can switch before signing in. **Logout
+read by `app._ui_lang()`). `app._language_toggle(container)` renders one button
+(`key="lang_btn"`) into the container it's given, labelled with the *other*
+language — `🌐 English` while in German — which flips the state and reruns. When
+signed in it sits in the sidebar's bottom 3-column row beside **App beenden** and
+**Abmelden**; the same button is also drawn under the login form, so an anonymous
+visitor can switch before signing in. **Logout
 preserves `ui_lang`** while `st.session_state.clear()` drops everything else, so
 the next user on a shared machine keeps the chosen language but inherits no data.
 
@@ -102,15 +104,30 @@ variables in `.env` (see [../src/auth.py](../src/auth.py)). A missing seed raise
 and `main()` renders that as an `st.error` instead of a traceback.
 
 ## Single-window workflow
-The main area is one panel — no tabs. Top to bottom: an intro caption, the
-summary **Sprache** and **Vorlage** selectboxes in a 2-column row, a file
-uploader accepting **PDF/DOCX/TXT/MD**, and one primary **Zusammenfassen**
-button (disabled until a file is uploaded and the chosen model is installed).
+The main area is one panel — no tabs. Top to bottom:
+
+1. an intro caption;
+2. **quality parameters** in a 2-column row — the **Modell** selector (with its
+   speed/quality stars and note, rendered by `_model_selector`) and, beside it
+   under a **PRÄZISION** caption, a `st.selectbox` choosing **Schnellmodus
+   (wörtlich)** (default) or **Genaues Markdown (LLM)**, with a `help` tooltip
+   explaining the cost. Below it, speed/quality stars flip with the choice —
+   fast = Speed ★★★ / Quality ★☆☆, precise = Speed ★☆☆ / Quality ★★★;
+3. a file uploader accepting **PDF/DOCX/TXT/MD**;
+4. the summary **Sprache** (with an **Auswahl** caption below it) and **Vorlage**
+   selectboxes in a 2-column row;
+5. one primary **Zusammenfassen** button (disabled until a file is uploaded and
+   the chosen model is installed).
+
+The model selector lives in the main panel (not the sidebar), next to the
+precision selectbox it pairs with.
 
 Clicking it runs `app._run()`, which calls
-`agent.run(filename=..., data=..., fast=True, ...)` — a single pass that converts
-the upload to **plain text** (digital PDF pages verbatim, scanned pages OCR'd; no
-per-page LLM rewrite) *and* summarizes it. On success the summary is stored in
+`agent.run(filename=..., data=..., fast=not llm_format, ...)` — a single pass
+that converts the upload *and* summarizes it. With the fast option (`fast=True`)
+conversion is **plain text** (digital PDF pages verbatim, scanned pages OCR'd; no
+per-page LLM rewrite); with the precise option (`fast=False`) each text page is LLM-formatted
+first (one call per page, wording preserved). See [ingestion.md](ingestion.md). On success the summary is stored in
 `st.session_state["summary"]` (with the filename `["stem"]`), rendered in a
 bordered container, and offered as `.md` / `.docx` / `.pdf` downloads. There is
 no intermediate Markdown preview or `.md`/original-text download. `summary` /
@@ -118,18 +135,21 @@ no intermediate Markdown preview or `.md`/original-text download. `summary` /
 
 ## Layout conventions
 - `layout="wide"`, sidebar `expanded`.
-- Sidebar title `## 📝 KI-Zusammenfassung`, then the GUI-language toggle, then
-  `---` dividers. The sidebar holds the language toggle, the model selector, an
-  **Advanced options** expander, and the exit/logout buttons; the *summary*
-  language and the template live in the main panel, next to the work they affect.
+- Sidebar title `## 📝 KI-Zusammenfassung`, then `---` dividers. The sidebar holds
+  only the **Advanced options** expander and, at the bottom, the signed-in caption
+  above three stacked full-width buttons: the GUI-language toggle, then **Abmelden**,
+  then **App beenden**. Everything else — the model selector, the *summary* language
+  and the template — lives in the main panel, next to the work it affects.
 - **Advanced options** (`st.expander`, collapsed) holds a *Clear CUDA memory*
   button (`ollama_client.unload_all`).
-- Section labels are ALL-CAPS `st.caption()` (MODELL / SPRACHE / VORLAGE) above
-  `label_visibility="collapsed"` selectboxes.
+- Section labels are ALL-CAPS `st.caption()` (MODELL / PRÄZISION / SPRACHE /
+  VORLAGE) above `label_visibility="collapsed"` widgets.
 - **Zusammenfassen** is `type="primary"` (filled green). Summary downloads are
   `use_container_width=True` in a 3-column row.
 - The summary renders inside `st.container(border=True)`.
 - The language, exit and logout buttons use `key="lang_btn"` / `key="exit_btn"` /
   `key="logout_btn"`, which the CSS targets via `.st-key-*` to give them a boxed
-  style instead of the transparent sidebar-nav look. Exit SIGTERMs the app's own
-  PID only.
+  style instead of the transparent sidebar-nav look (the CSS also forces them
+  `width: 100%`). All three are full-width buttons stacked on their own lines,
+  top to bottom: language toggle, **Abmelden**, **App beenden**. Exit SIGTERMs the
+  app's own PID only.

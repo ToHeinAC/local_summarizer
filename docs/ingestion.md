@@ -73,12 +73,14 @@ text is used verbatim, so a digital PDF converts with **zero** LLM calls (measur
 Trade-off: no LLM-added headings/tables and raw reading order on multi-column
 layouts.
 
-**The UI always converts with `fast=True`** — `agent.run(fast=True)` →
-`to_markdown(fast=True)`. There is no toggle; the single-click flow trades the
-per-page rewrite's tidier Markdown for a near-instant, byte-exact conversion.
+**The UI defaults to `fast=True`** — `agent.run(fast=True)` →
+`to_markdown(fast=True)` — trading the per-page rewrite's tidier Markdown for a
+near-instant, byte-exact conversion. A main-panel selectbox (*Schnellmodus
+(wörtlich)* by default, or *Genaues Markdown (LLM)*) flips it to `fast=False` for
+callers who want the LLM-formatted pass; see [ui.md](ui.md).
 
 ## Cost note (`fast=False`)
-With `fast=False` (available to direct API callers, not the UI) the per-page
+With `fast=False` (the UI's precise option, or direct API callers) the per-page
 rewrite means a digital PDF costs one LLM call per page *before* summarization
 begins — this mirrors the reference repo. The calls run concurrently (see above),
 so wall-clock cost is roughly the per-page cost times `ceil(pages / effective_slots)`.

@@ -13,11 +13,11 @@ the same way `models.py` already queries `GET /api/tags` over `urllib`.
    default with an English toggle (see [ui.md](ui.md)), gated by a sign-in form
    (`auth.verify`, bcrypt hashes in `data/users.json`); nothing renders until a
    user is in `st.session_state["user"]`. Then a single window: the main panel
-   collects the summary language, the template, and the uploaded document, and
-   one **Zusammenfassen** button calls `agent.run(filename=..., data=...,
-   fast=True)` — conversion runs *inside* that call, so the UI never touches
-   `extract` directly. The sidebar holds the model selector, an Advanced-options
-   expander, and the safe exit button. `theme.py` holds the Forest palette and
+   collects the model, the precision (LLM-Markdown) selectbox, the uploaded document,
+   the summary language and the template, and one **Zusammenfassen** button calls
+   `agent.run(filename=..., data=..., fast=...)` — conversion runs *inside* that
+   call, so the UI never touches `extract` directly. The sidebar holds only an
+   Advanced-options expander and the language/exit/logout button row. `theme.py` holds the Forest palette and
    the injectable CSS. Calls `agent.run()` and `export.*`; never imports
    LangChain. See [ui.md](ui.md).
 2. **Agent (`agent.py`, `tools.py`)** — the LangGraph state machine and the
