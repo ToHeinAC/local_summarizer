@@ -7,3 +7,4 @@ font                     = "sans serif"
 
 [server]
 port = 8530
+runOnSave = true
