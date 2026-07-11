@@ -102,7 +102,10 @@ of the agent and ingestion layers. Details: [docs/architecture.md](docs/architec
   (wörtlich)* by default, or *Genaues Markdown (LLM)*) opts into the per-page
   LLM-rewrite path (`fast=False`), which formats each text page
   (headings/lists/tables) without changing wording at the cost of one LLM call
-  per page; that formatted Markdown is downloadable in the UI.
+  per page; that formatted Markdown is downloadable in the UI. The rewrite runs
+  on a small fixed model (`REWRITE_MODEL`, default
+  `LiquidAI/lfm2.5-1.2b-instruct:latest`) — independent of the summarization
+  model, so the model selector only affects summarization.
 - **Markdown-first ingestion**: every upload becomes text before
   summarization. PDF pages are routed per page — a text layer ≥ 40 chars is used
   verbatim (or, with `fast=False`, LLM-rewritten with wording preserved);
@@ -114,7 +117,9 @@ of the agent and ingestion layers. Details: [docs/architecture.md](docs/architec
 - **Cost**: because the UI converts with `fast=True`, a digital PDF adds **no**
   LLM calls before summarizing (its text layer is used verbatim); only scanned
   pages cost a vision-model OCR call. The `fast=False` per-page rewrite (one LLM
-  call per page) remains available to API callers. See [docs/ingestion.md](docs/ingestion.md).
+  call per page) uses the small `REWRITE_MODEL`, so even the precise path is
+  cheap: ~0.7s/page vs ~5.7s for a large model, and it never rewords (99% word
+  recall, no hallucination). See [docs/ingestion.md](docs/ingestion.md).
 - **Performance**: two capped-cost decisions keep the local LLM fast. (1) Every
   Ollama call pins `num_ctx` (8192 for text, 16384 for OCR) — Ollama otherwise
   allocates each model's full 128k window, ballooning VRAM and cutting

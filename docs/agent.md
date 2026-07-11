@@ -42,7 +42,7 @@ agent.run(
     filename="report.pdf", data=pdf_bytes,     # or text="..."
     target_language="auto", host="http://localhost:11434",
     ocr_model="deepseek-ocr:3b",               # vision model for scanned pages
-    rewrite_model="gemma4:e4b",                # text model for digital pages
+    rewrite_model="LiquidAI/lfm2.5-1.2b-instruct:latest",  # small text model for digital pages
     pdf_dpi=150,
     fast=False,                                # True: verbatim text, skip rewrite
     on_progress=lambda frac, label: ...,

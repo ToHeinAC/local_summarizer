@@ -183,7 +183,7 @@ def run(
     target_language: str = "auto",
     host: Optional[str] = None,
     ocr_model: str = "deepseek-ocr:3b",
-    rewrite_model: str = "gemma4:e4b",
+    rewrite_model: str = "LiquidAI/lfm2.5-1.2b-instruct:latest",
     pdf_dpi: int = 150,
     fast: bool = False,
     on_progress: Optional[ProgressFn] = None,

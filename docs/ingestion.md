@@ -82,10 +82,16 @@ callers who want the LLM-formatted pass; see [ui.md](ui.md).
 ## Cost note (`fast=False`)
 With `fast=False` (the UI's precise option, or direct API callers) the per-page
 rewrite means a digital PDF costs one LLM call per page *before* summarization
-begins — this mirrors the reference repo. The calls run concurrently (see above),
-so wall-clock cost is roughly the per-page cost times `ceil(pages / effective_slots)`.
-Set `REWRITE_MODEL` to a fast model (e.g. `LiquidAI/lfm2.5-1.2b-instruct`) for
-large documents.
+begins. The calls run concurrently (see above), so wall-clock cost is roughly the
+per-page cost times `ceil(pages / effective_slots)`.
+
+`REWRITE_MODEL` defaults to a small, fast model
+(`LiquidAI/lfm2.5-1.2b-instruct:latest`) precisely because the rewrite only adds
+Markdown structure and never rewords — a large model buys no fidelity here.
+Measured ~0.7s/page vs ~5.7s/page for `gemma4:e4b`; end-to-end the 80-page
+`Sanierungskonzept` sample converts in ~54s (of which ~40s is loading the vision
+model for its one scanned page), and a 4-page digital PDF in ~4s. Word recall vs
+the source is 99% with zero hallucinated words, matching the large model.
 
 ## Language detection (`src/language.py`)
 `detect_language(text, fallback="en") -> str` returns an ISO-639-1 code via

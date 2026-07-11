@@ -32,7 +32,7 @@ def to_markdown(
     data: bytes,
     *,
     ocr_model: str = "deepseek-ocr:3b",
-    rewrite_model: str = "gemma4:e4b",
+    rewrite_model: str = "LiquidAI/lfm2.5-1.2b-instruct:latest",
     dpi: int = 150,
     host: str | None = None,
     on_progress: ProgressCb | None = None,

@@ -31,6 +31,6 @@ def load_config() -> Config:
         default_template=os.getenv("DEFAULT_TEMPLATE", "standard"),
         default_language=os.getenv("DEFAULT_LANGUAGE", "auto"),
         ocr_model=os.getenv("OCR_MODEL", "deepseek-ocr:3b"),
-        rewrite_model=os.getenv("REWRITE_MODEL", "gemma4:e4b"),
+        rewrite_model=os.getenv("REWRITE_MODEL", "LiquidAI/lfm2.5-1.2b-instruct:latest"),
         pdf_dpi=int(os.getenv("PDF_DPI", "150")),
     )

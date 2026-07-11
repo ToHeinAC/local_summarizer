@@ -2,7 +2,7 @@ import importlib
 
 
 def test_defaults(monkeypatch):
-    for key in ("OLLAMA_HOST", "APP_PORT", "DEFAULT_MODEL", "OCR_MODEL", "PDF_DPI"):
+    for key in ("OLLAMA_HOST", "APP_PORT", "DEFAULT_MODEL", "OCR_MODEL", "REWRITE_MODEL", "PDF_DPI"):
         monkeypatch.delenv(key, raising=False)
     import src.config as config
 
@@ -12,6 +12,7 @@ def test_defaults(monkeypatch):
     assert cfg.default_model == "standard"
     assert cfg.default_language == "auto"
     assert cfg.ocr_model == "deepseek-ocr:3b"
+    assert cfg.rewrite_model == "LiquidAI/lfm2.5-1.2b-instruct:latest"
     assert cfg.pdf_dpi == 150
 
 
