@@ -99,6 +99,14 @@ ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
 - **Cost**: the per-page rewrite means a digital PDF costs one LLM call per page
   before summarizing. Deliberate, matching the reference repo; set
   `REWRITE_MODEL` to a fast model for large documents.
+- **Performance**: two capped-cost decisions keep the local LLM fast. (1) Every
+  Ollama call pins `num_ctx` (8192 for text, 16384 for OCR) — Ollama otherwise
+  allocates each model's full 128k window, ballooning VRAM and cutting
+  throughput ~5× with no benefit for these small prompts. (2) PDF pages are
+  converted concurrently (`md_convert.MAX_CONVERT_WORKERS=4`); this needs
+  `OLLAMA_NUM_PARALLEL≥2` on the Ollama server to matter (~1.9× on a 6-page PDF).
+  Both cost no precision. See [docs/ingestion.md](docs/ingestion.md),
+  [docs/agent.md](docs/agent.md).
 - **Theme**: Forest palette (green/cream), Inter + Libre Baskerville, ported
   from the same repo. Colors are duplicated in `.streamlit/config.toml` and
   `theme.FOREST` and must stay in sync. See [docs/ui.md](docs/ui.md).

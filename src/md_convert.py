@@ -16,6 +16,7 @@ from __future__ import annotations
 import base64
 import io
 from collections.abc import Callable, Iterator
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 
 from src import ollama_client
 from src.i18n import DEFAULT_LANG, t
@@ -27,6 +28,7 @@ from src.prompts import (
 )
 
 TEXT_THRESHOLD = 40  # chars; below this a PDF page is treated as image-only
+MAX_CONVERT_WORKERS = 4  # parallel page LLM calls; align with OLLAMA_NUM_PARALLEL
 
 # Callback signature: on_progress(done: int, total: int, label: str) -> None
 ProgressCb = Callable[[int, int, str], None]
@@ -133,20 +135,53 @@ def pdf_to_markdown(
     """Convert a PDF to Markdown, OCR'ing any page without a usable text layer.
 
     ``lang`` selects the GUI language of the per-page progress labels.
+
+    Pages are converted concurrently (up to ``MAX_CONVERT_WORKERS`` LLM calls in
+    flight) since each page is an independent Ollama request and the per-page
+    rewrite/OCR dominates conversion time. Rendering stays on the calling thread
+    (pypdfium2 is not thread-safe); only the LLM calls run in the pool. Results
+    are slotted back by page index so output order is preserved, and progress
+    counts completed pages so the bar stays monotonic despite out-of-order
+    completion.
     """
     total = _pdf_page_count(data)
-    parts: list[str] = []
+    results: list[str] = [""] * total
     used_ocr = False
+    done = 0
+    pages = enumerate(iter_pdf_pages(data, dpi))
+
+    def _convert(kind, payload) -> str:
+        if kind == "text":
+            return rewrite_text(payload, rewrite_model, host)
+        return convert_image(payload, ocr_model, host)
+
     try:
-        for i, (kind, payload) in enumerate(iter_pdf_pages(data, dpi)):
-            if on_progress:
-                kind_label = "OCR" if kind == "image" else "Text"
-                on_progress(i, total, t("page", lang, done=i + 1, total=total, kind=kind_label))
-            if kind == "text":
-                parts.append(rewrite_text(payload, rewrite_model, host))
-            else:
-                used_ocr = True
-                parts.append(convert_image(payload, ocr_model, host))
+        with ThreadPoolExecutor(max_workers=MAX_CONVERT_WORKERS) as pool:
+            pending: dict = {}
+
+            def submit_more() -> None:
+                nonlocal used_ocr
+                while len(pending) < MAX_CONVERT_WORKERS:
+                    try:
+                        idx, (kind, payload) = next(pages)
+                    except StopIteration:
+                        return
+                    if kind == "image":
+                        used_ocr = True
+                    pending[pool.submit(_convert, kind, payload)] = (idx, kind)
+
+            submit_more()
+            while pending:
+                finished, _ = wait(pending, return_when=FIRST_COMPLETED)
+                for fut in finished:
+                    idx, kind = pending.pop(fut)
+                    results[idx] = fut.result()
+                    done += 1
+                    if on_progress:
+                        kind_label = "OCR" if kind == "image" else "Text"
+                        label = t("page", lang, done=done, total=total, kind=kind_label)
+                        on_progress(done, total, label)
+                submit_more()
     finally:
         # Free the vision model so the summarizer's text model gets the full GPU
         # instead of splitting VRAM with a resident OCR model. Skipped when no
@@ -155,4 +190,4 @@ def pdf_to_markdown(
             ollama_client.unload(ocr_model, host)
     if on_progress:
         on_progress(total, total, t("converted", lang))
-    return "\n\n".join(parts)
+    return "\n\n".join(results)

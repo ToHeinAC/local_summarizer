@@ -28,8 +28,20 @@ progress labels and of `UnsupportedFileError`; default `"de"`):
   `PDF_DPI` (default 150), JPEG-encoded, and sent to the vision `OCR_MODEL`.
 
 Each page is classified independently, so mixed digital/scanned PDFs work. Pages
-are joined with blank lines. Progress is reported per page via
-`on_progress(done, total, label)`.
+are converted concurrently through a `ThreadPoolExecutor`
+(`MAX_CONVERT_WORKERS = 4` LLM calls in flight) — each page is an independent
+Ollama request and the per-page rewrite/OCR dominates conversion time. Rendering
+stays on the calling thread (pypdfium2 is not thread-safe); only the LLM calls
+run in the pool. Results are slotted back by page index so output order is
+preserved, and progress counts *completed* pages so the bar stays monotonic
+despite out-of-order completion. Pages are joined with blank lines; progress is
+reported per completed page via `on_progress(done, total, label)`.
+
+**Server-side parallelism required.** The client sends up to `MAX_CONVERT_WORKERS`
+requests at once, but Ollama only runs them concurrently when its server allows
+≥2 slots. Set `OLLAMA_NUM_PARALLEL=4` on the Ollama server (systemd override or
+env) — with the default (1 slot here) the requests queue and the speedup is
+negligible. Measured ~1.9× on a 6-page digital PDF once enabled.
 
 **OCR prompt selection:** `deepseek-ocr*` models get `OCR_DEEPSEEK_PROMPT`
 (the `<|grounding|>` token enables layout-aware OCR); any other vision model gets
@@ -47,12 +59,17 @@ bullet/number styles → `-`/`1.`, and tables → Markdown tables. No LLM call.
 ## Ollama access (`src/ollama_client.py`)
 Plain `ollama` package (not LangChain), so the ingestion layer stays inside the
 project's LangChain boundary. Exposes `ocr()`, `rewrite()`, `unload()`, all at
-`temperature=0.0`.
+`temperature=0.0`. Both `ocr` and `rewrite` pin `num_ctx` (`REWRITE_NUM_CTX=8192`,
+`OCR_NUM_CTX=16384`): without it Ollama allocates each model's full trained
+window (128k for gemma4), which balloons VRAM and cuts throughput ~5×. One page
+of text (or its image tokens) fits comfortably, so the cap costs no precision.
 
 ## Cost note
 The per-page rewrite means a digital PDF costs one LLM call per page *before*
-summarization begins. This mirrors the reference repo. Set `REWRITE_MODEL` to a
-fast model (e.g. `LiquidAI/lfm2.5-1.2b-instruct`) for large documents.
+summarization begins. This mirrors the reference repo. The calls now run
+concurrently (see above), so wall-clock cost is roughly the per-page cost times
+`ceil(pages / effective_slots)`. Set `REWRITE_MODEL` to a fast model
+(e.g. `LiquidAI/lfm2.5-1.2b-instruct`) for large documents.
 
 ## Language detection (`src/language.py`)
 `detect_language(text, fallback="en") -> str` returns an ISO-639-1 code via

@@ -3,6 +3,11 @@
 `src/agent.py` builds a LangGraph `StateGraph` over `SummaryState`. `src/tools.py`
 wraps `ChatOllama`. All prompts are constants in `src/prompts.py`.
 
+`make_llm` pins `num_ctx=tools.NUM_CTX` (8192). Without it Ollama allocates the
+model's full trained window (128k for gemma4), which balloons the KV cache and
+cuts throughput ~5×; every workload here (6000-char chunks, reduce batches of 8,
+finalize) fits well under 8192, so the cap costs no precision.
+
 ## Nodes
 1. **ingest** — `extract.to_markdown()` converts file bytes to Markdown (unless
    `text` is passed directly); `language.py` detects the source language. Raises
