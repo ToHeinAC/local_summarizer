@@ -37,16 +37,19 @@ def to_markdown(
     host: str | None = None,
     on_progress: ProgressCb | None = None,
     lang: str = DEFAULT_LANG,
+    fast: bool = False,
 ) -> str:
     """Return the Markdown of ``data`` based on ``filename``'s extension.
 
     ``lang`` is the GUI language of the progress labels and the error message.
-    Raises UnsupportedFileError for unknown extensions.
+    ``fast=True`` skips the per-page LLM rewrite for digital PDF pages (see
+    :func:`md_convert.pdf_to_markdown`). Raises UnsupportedFileError for unknown
+    extensions.
     """
     ext = _extension(filename)
     if ext == ".pdf":
         text = md_convert.pdf_to_markdown(
-            data, ocr_model, rewrite_model, dpi, host, on_progress, lang
+            data, ocr_model, rewrite_model, dpi, host, on_progress, lang, fast
         )
     elif ext == ".docx":
         text = md_convert.docx_to_markdown(data)

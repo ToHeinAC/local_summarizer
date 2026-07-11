@@ -107,6 +107,11 @@ ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
   `OLLAMA_NUM_PARALLEL≥2` on the Ollama server to matter (~1.9× on a 6-page PDF).
   Both cost no precision. See [docs/ingestion.md](docs/ingestion.md),
   [docs/agent.md](docs/agent.md).
+- **Fast conversion toggle**: the *Fast conversion (skip LLM)* switch in the
+  sidebar's Advanced options sets `to_markdown(fast=True)`, which uses a digital
+  PDF's extracted text verbatim instead of an LLM rewrite per page — near-instant
+  and byte-exact (32s → ~0s on a 6-page PDF), at the cost of plainer Markdown and
+  raw reading order. Scanned pages still OCR. See [docs/ingestion.md](docs/ingestion.md).
 - **Theme**: Forest palette (green/cream), Inter + Libre Baskerville, ported
   from the same repo. Colors are duplicated in `.streamlit/config.toml` and
   `theme.FOREST` and must stay in sync. See [docs/ui.md](docs/ui.md).

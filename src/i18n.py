@@ -62,6 +62,22 @@ STRINGS: dict[str, dict[str, str]] = {
     "shutting_down": {"de": "Wird beendet…", "en": "Shutting down…"},
     "logout": {"de": "Abmelden", "en": "Logout"},
     "advanced_options": {"de": "Erweiterte Optionen", "en": "Advanced options"},
+    "fast_convert": {
+        "de": "Schnelle Umwandlung (ohne LLM)",
+        "en": "Fast conversion (skip LLM)",
+    },
+    "fast_convert_help": {
+        "de": (
+            "Für digitale PDFs mit Textebene: übernimmt den extrahierten Text "
+            "direkt statt ihn pro Seite per LLM zu formatieren. Nahezu sofort und "
+            "wortgetreu; einfacheres Markdown, gescannte Seiten brauchen weiter OCR."
+        ),
+        "en": (
+            "For digital PDFs with a text layer: uses the extracted text directly "
+            "instead of an LLM rewrite per page. Near-instant and byte-exact; "
+            "plainer Markdown, scanned pages still need OCR."
+        ),
+    },
     "clear_vram": {"de": "CUDA-Speicher leeren", "en": "Clear CUDA memory"},
     "vram_cleared": {
         "de": "{n} Modell(e) aus dem VRAM entladen.",

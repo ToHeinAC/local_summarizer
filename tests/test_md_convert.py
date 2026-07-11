@@ -68,6 +68,17 @@ def test_ocr_model_unloaded_only_when_ocr_ran(scanned_pdf_bytes, pdf_bytes, stub
     assert stub_ollama.unloaded == ["deepseek-ocr:3b"]
 
 
+def test_fast_skips_rewrite_for_text_pages(pdf_bytes, stub_ollama):
+    out = md_convert.pdf_to_markdown(pdf_bytes, "deepseek-ocr:3b", "gemma4:e4b", 72, fast=True)
+    assert stub_ollama.rewritten == [], "fast mode must not call the rewrite model"
+    assert out.strip(), "extracted text is used verbatim"
+
+
+def test_fast_still_ocrs_scanned_pages(scanned_pdf_bytes, stub_ollama):
+    md_convert.pdf_to_markdown(scanned_pdf_bytes, "deepseek-ocr:3b", "gemma4:e4b", 72, fast=True)
+    assert stub_ollama.ocr_prompts, "scanned pages have no text layer, so OCR still runs"
+
+
 def test_pdf_progress_reports_every_page(pdf_bytes, stub_ollama):
     events = []
     md_convert.pdf_to_markdown(

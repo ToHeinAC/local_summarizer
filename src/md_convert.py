@@ -131,10 +131,17 @@ def pdf_to_markdown(
     host: str | None = None,
     on_progress: ProgressCb | None = None,
     lang: str = DEFAULT_LANG,
+    fast: bool = False,
 ) -> str:
     """Convert a PDF to Markdown, OCR'ing any page without a usable text layer.
 
     ``lang`` selects the GUI language of the per-page progress labels.
+
+    ``fast=True`` skips the per-page LLM rewrite for pages that already have a
+    text layer: their extracted text is used verbatim (byte-exact wording, no
+    model call), so a digital PDF converts in near-zero time. Scanned pages
+    still require OCR. Trade-off: no LLM-added headings/tables and raw reading
+    order for multi-column layouts.
 
     Pages are converted concurrently (up to ``MAX_CONVERT_WORKERS`` LLM calls in
     flight) since each page is an independent Ollama request and the per-page
@@ -152,7 +159,7 @@ def pdf_to_markdown(
 
     def _convert(kind, payload) -> str:
         if kind == "text":
-            return rewrite_text(payload, rewrite_model, host)
+            return payload if fast else rewrite_text(payload, rewrite_model, host)
         return convert_image(payload, ocr_model, host)
 
     try:

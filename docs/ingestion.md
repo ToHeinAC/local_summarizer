@@ -71,6 +71,14 @@ concurrently (see above), so wall-clock cost is roughly the per-page cost times
 `ceil(pages / effective_slots)`. Set `REWRITE_MODEL` to a fast model
 (e.g. `LiquidAI/lfm2.5-1.2b-instruct`) for large documents.
 
+**Fast mode.** `pdf_to_markdown(..., fast=True)` (and `to_markdown(..., fast=True)`)
+skips the rewrite entirely for pages that already have a text layer: the
+pypdfium2-extracted text is used verbatim, so a digital PDF converts with **zero**
+LLM calls (measured 32s → ~0s for a 6-page PDF) and byte-exact wording. Scanned
+pages still OCR. Trade-off: no LLM-added headings/tables and raw reading order on
+multi-column layouts. Exposed in the UI as the *Fast conversion (skip LLM)* toggle
+in the sidebar's Advanced options (`st.session_state["fast_convert"]`).
+
 ## Language detection (`src/language.py`)
 `detect_language(text, fallback="en") -> str` returns an ISO-639-1 code via
 `langdetect`. `DetectorFactory.seed = 0` makes it deterministic. Empty input or

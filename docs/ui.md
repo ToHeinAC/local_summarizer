@@ -120,9 +120,12 @@ Session keys `markdown` / `stem` are the only handoff between the tabs.
 ## Layout conventions
 - `layout="wide"`, sidebar `expanded`.
 - Sidebar title `## 📝 KI-Zusammenfassung`, then the GUI-language toggle, then
-  `---` dividers. The sidebar holds **only** the language toggle, the model
-  selector, and the exit/logout buttons; the *summary* language and the template
-  live in tab 2, next to the work they affect.
+  `---` dividers. The sidebar holds the language toggle, the model selector, an
+  **Advanced options** expander, and the exit/logout buttons; the *summary*
+  language and the template live in tab 2, next to the work they affect.
+- **Advanced options** (`st.expander`, collapsed) holds the *Fast conversion
+  (skip LLM)* toggle (`key="fast_convert"`, read by tab 1's `_convert`) and a
+  *Clear CUDA memory* button (`ollama_client.unload_all`).
 - Section labels are ALL-CAPS `st.caption()` (MODELL / SPRACHE / VORLAGE) above
   `label_visibility="collapsed"` selectboxes.
 - **In Markdown umwandeln** and **Zusammenfassen** are `type="primary"` (filled green).

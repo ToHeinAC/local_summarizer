@@ -97,6 +97,7 @@ def _sidebar(lang: str) -> dict:
         st.sidebar.warning(t("not_installed", lang, tag=model["tag"]))
 
     with st.sidebar.expander(t("advanced_options", lang), expanded=False):
+        st.toggle(t("fast_convert", lang), key="fast_convert", help=t("fast_convert_help", lang))
         if st.button(t("clear_vram", lang), key="clear_vram_btn"):
             unloaded = ollama_client.unload_all(CFG.ollama_host)
             if unloaded:
@@ -135,6 +136,7 @@ def _convert(uploaded, lang: str) -> None:
             host=CFG.ollama_host,
             on_progress=on_progress,
             lang=lang,
+            fast=st.session_state.get("fast_convert", False),
         )
     except Exception as exc:  # surface any conversion/OCR failure to the user
         bar.empty()
