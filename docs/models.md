@@ -5,7 +5,7 @@ installed on the local server.
 
 | id | tag | label | speed | quality |
 |---|---|---|---|---|
-| `fast` | `LiquidAI/lfm2.5-1.2b-instruct` | Schnell / Fast | 3 | 1 |
+| `fast` | `LiquidAI/lfm2.5-1.2b-instruct:latest` | Schnell / Fast | 3 | 1 |
 | `standard` *(default)* | `gemma4:e4b` | Standard | 2 | 2 |
 | `smarter` | `qwen3:14b` | Klüger / Smarter | 1 | 3 |
 | `accurate` | `gpt-oss:20b` | Genau / Accurate | 1 | 3 |

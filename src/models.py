@@ -16,10 +16,10 @@ import urllib.request
 MODELS: list[dict] = [
     {
         "id": "fast",
-        "tag": "LiquidAI/lfm2.5-1.2b-instruct",
+        "tag": "LiquidAI/lfm2.5-1.2b-instruct:latest",
         "label": {
-            "de": "Schnell (LiquidAI/lfm2.5-1.2b-instruct)",
-            "en": "Fast (LiquidAI/lfm2.5-1.2b-instruct)",
+            "de": "Schnell (lfm2.5-1.2b-instruct)",
+            "en": "Fast (lfm2.5-1.2b-instruct)",
         },
         "speed": 3,
         "quality": 1,
