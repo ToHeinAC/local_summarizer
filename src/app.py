@@ -154,8 +154,9 @@ def _run(uploaded, opts: dict, model: dict, lang: str) -> None:
     def on_progress(fraction: float, label: str) -> None:
         bar.progress(min(fraction, 1.0), text=label)
 
+    precise = opts["llm_format"]
     try:
-        summary = agent.run(
+        result = agent.run(
             filename=uploaded.name,
             data=uploaded.getvalue(),
             template_id=opts["template_id"],
@@ -165,11 +166,14 @@ def _run(uploaded, opts: dict, model: dict, lang: str) -> None:
             ocr_model=CFG.ocr_model,
             rewrite_model=CFG.rewrite_model,
             pdf_dpi=CFG.pdf_dpi,
-            # fast=True reads text verbatim; the LLM-format toggle flips it to
-            # the per-page rewrite for nicer Markdown (one LLM call per page).
-            fast=not opts["llm_format"],
+            # fast=True reads text verbatim; the precise option flips it to the
+            # per-page rewrite for nicer Markdown (one LLM call per page).
+            fast=not precise,
             on_progress=on_progress,
             ui_lang=lang,
+            # In precise mode also return the LLM-formatted document Markdown,
+            # so the UI can offer it as a download alongside the summary.
+            return_markdown=precise,
         )
     except Exception as exc:  # surface any conversion/LLM failure to the user
         bar.empty()
@@ -177,7 +181,9 @@ def _run(uploaded, opts: dict, model: dict, lang: str) -> None:
         return
 
     bar.empty()
+    summary, converted_md = result if precise else (result, None)
     st.session_state["summary"] = summary
+    st.session_state["converted_md"] = converted_md
     st.session_state["stem"] = os.path.splitext(uploaded.name)[0]
 
 
@@ -227,10 +233,19 @@ def _main_panel(lang: str) -> None:
 
     if summary := st.session_state.get("summary"):
         st.markdown("---")
+        stem = st.session_state.get("stem", t("default_stem", lang))
+        if converted_md := st.session_state.get("converted_md"):
+            st.download_button(
+                t("download_converted", lang),
+                data=converted_md.encode("utf-8"),
+                file_name=f"{stem}.md",
+                mime="text/markdown",
+                key="download_converted_btn",
+            )
         st.subheader(t("summary_heading", lang))
         with st.container(border=True):
             st.markdown(summary)
-        _downloads(summary, st.session_state.get("stem", t("default_stem", lang)), lang)
+        _downloads(summary, stem, lang)
 
 
 def main() -> None:

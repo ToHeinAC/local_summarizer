@@ -126,15 +126,19 @@ The model selector lives in the main panel (not the sidebar), next to the
 precision selectbox it pairs with.
 
 Clicking it runs `app._run()`, which calls
-`agent.run(filename=..., data=..., fast=not llm_format, ...)` — a single pass
-that converts the upload *and* summarizes it. With the fast option (`fast=True`)
-conversion is **plain text** (digital PDF pages verbatim, scanned pages OCR'd; no
-per-page LLM rewrite); with the precise option (`fast=False`) each text page is LLM-formatted
-first (one call per page, wording preserved). See [ingestion.md](ingestion.md). On success the summary is stored in
+`agent.run(filename=..., data=..., fast=not llm_format, return_markdown=llm_format, ...)`
+— a single pass that converts the upload *and* summarizes it. With the fast option
+(`fast=True`) conversion is **plain text** (digital PDF pages verbatim, scanned
+pages OCR'd; no per-page LLM rewrite); with the precise option (`fast=False`) each
+text page is LLM-formatted first (one call per page, wording preserved). See
+[ingestion.md](ingestion.md). On success the summary is stored in
 `st.session_state["summary"]` (with the filename `["stem"]`), rendered in a
-bordered container, and offered as `.md` / `.docx` / `.pdf` downloads. There is
-no intermediate Markdown preview or `.md`/original-text download. `summary` /
-`stem` are the only session keys the flow writes.
+bordered container, and offered as `.md` / `.docx` / `.pdf` downloads. In the
+precise mode `agent.run(return_markdown=True)` also returns the generated document
+Markdown; it is stored in `st.session_state["converted_md"]` and offered as a
+separate **Erzeugtes Markdown herunterladen (.md)** download above the summary (in
+fast mode that key is `None` and no such button shows). `summary` / `converted_md`
+/ `stem` are the session keys the flow writes.
 
 ## Layout conventions
 - `layout="wide"`, sidebar `expanded`.

@@ -41,8 +41,9 @@ rendered (see [docs/ui.md](docs/ui.md)). One-click flow:
   text (`fast=True` → digital PDF pages verbatim; the precise option flips it to
   `fast=False` → per-page LLM rewrite; scanned pages always OCR'd by a vision
   model), detects language, chunks, map-reduces via the selected Ollama model, and
-  finalizes → `export.py` produces the `.md`/`.pdf`/`.docx` download bytes. No
-  intermediate Markdown is shown.
+  finalizes → `export.py` produces the `.md`/`.pdf`/`.docx` download bytes. The
+  intermediate Markdown is not previewed; the precise mode does offer it as a
+  separate `.md` download.
 
 The one progress callback threads through the whole run, so Streamlit stays out
 of the agent and ingestion layers. Details: [docs/architecture.md](docs/architecture.md),
@@ -89,8 +90,10 @@ of the agent and ingestion layers. Details: [docs/architecture.md](docs/architec
   template) and the file upload live on one screen; pressing **Zusammenfassen**
   converts *and* summarizes in a single `agent.run(filename=…, fast=…)` pass
   (`fast=True` by default, `fast=False` when the precise option is selected).
-  No separate convert step and no intermediate Markdown to inspect or download —
-  the earlier two-tab, download-the-`.md`-first workflow was dropped as friction.
+  No separate convert step; the earlier two-tab, download-the-`.md`-first workflow
+  was dropped as friction. The precise mode is the one exception: it *also* returns
+  the generated document Markdown (`agent.run(return_markdown=True)`) so the UI can
+  offer it as a standalone `.md` download next to the summary.
 - **Plain-text conversion (default) + precision selectbox**: the UI converts with
   `fast=True` by default — digital PDF pages use their extracted text layer
   verbatim (zero LLM rewrite calls); scanned pages still OCR. Trade-off: plainer
@@ -99,7 +102,7 @@ of the agent and ingestion layers. Details: [docs/architecture.md](docs/architec
   (wörtlich)* by default, or *Genaues Markdown (LLM)*) opts into the per-page
   LLM-rewrite path (`fast=False`), which formats each text page
   (headings/lists/tables) without changing wording at the cost of one LLM call
-  per page.
+  per page; that formatted Markdown is downloadable in the UI.
 - **Markdown-first ingestion**: every upload becomes text before
   summarization. PDF pages are routed per page — a text layer ≥ 40 chars is used
   verbatim (or, with `fast=False`, LLM-rewritten with wording preserved);

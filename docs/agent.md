@@ -47,7 +47,8 @@ agent.run(
     fast=False,                                # True: verbatim text, skip rewrite
     on_progress=lambda frac, label: ...,
     ui_lang="de",                              # language of the progress labels
-) -> str  # Markdown
+    return_markdown=False,                     # True: also return converted Markdown
+) -> str  # Markdown summary (or (summary, converted_markdown) if return_markdown)
 ```
 `model_id` is resolved to an Ollama tag via `models.get_model`. `ocr_model` and
 `rewrite_model` are raw Ollama tags, not registry ids. `fast` travels in
@@ -58,6 +59,12 @@ verbatim and `rewrite_model` goes unused; scanned pages still OCR. See
 of the progress labels, which the nodes build with `i18n.t`; the summary's own
 language is `target_language`. It travels in `SummaryState["ui_lang"]` and is
 forwarded to `extract.to_markdown(lang=...)`.
+
+`return_markdown=True` returns a `(summary, converted_markdown)` tuple instead of
+just the summary; the second item is `SummaryState["text"]`, i.e. the text the
+document was converted to before summarizing (the LLM-rewritten Markdown when
+`fast=False`). The UI uses this in the precise mode to offer the generated
+document Markdown as its own download.
 
 ## Testing hook
 Nodes call `make_llm`/`run_prompt` from the module namespace, so tests

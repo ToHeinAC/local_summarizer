@@ -34,6 +34,17 @@ def test_run_short_text_single_pass(recorder):
     assert summary == "OUT1"
 
 
+def test_run_return_markdown_yields_summary_and_converted_text(recorder):
+    summary, markdown = agent.run(
+        text="A short document.",
+        template_id="standard",
+        model_id="fast",
+        return_markdown=True,
+    )
+    assert summary == "OUT1"
+    assert markdown == "A short document."  # the text it was converted to
+
+
 def test_run_long_text_triggers_map_and_reduce(recorder):
     summary = agent.run(text="A" * 15000, template_id="standard", model_id="fast")
     # 3 map calls + 1 reduce + 1 finalize.

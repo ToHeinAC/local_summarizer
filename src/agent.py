@@ -188,7 +188,8 @@ def run(
     fast: bool = False,
     on_progress: Optional[ProgressFn] = None,
     ui_lang: str = DEFAULT_LANG,
-) -> str:
+    return_markdown: bool = False,
+):
     """Summarize a document and return Markdown.
 
     Provide either ``text`` or (``filename`` and ``data``). Files are converted
@@ -196,6 +197,11 @@ def run(
     skips the per-page LLM rewrite for digital PDF pages (verbatim text layer).
     ``ui_lang`` is the GUI language of the progress labels; the summary's own
     language is ``target_language``.
+
+    Returns the summary Markdown. With ``return_markdown=True`` returns a
+    ``(summary, converted_markdown)`` tuple, where the second item is the text the
+    document was converted to before summarizing (the LLM-rewritten Markdown when
+    ``fast=False``).
     """
     state: SummaryState = {
         "ui_lang": ui_lang,
@@ -213,4 +219,6 @@ def run(
     }
     config = {"configurable": {"on_progress": on_progress}}
     result = build_graph().invoke(state, config=config)
+    if return_markdown:
+        return result["summary"], result["text"]
     return result["summary"]

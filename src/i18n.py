@@ -89,6 +89,10 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
     },
     "download_format": {"de": ".{fmt} herunterladen", "en": "Download .{fmt}"},
+    "download_converted": {
+        "de": "Erzeugtes Markdown herunterladen (.md)",
+        "en": "Download generated Markdown (.md)",
+    },
     "default_stem": {"de": "dokument", "en": "document"},
     "language_caption": {"de": "SPRACHE", "en": "LANGUAGE"},
     "selection_hint": {"de": "Auswahl", "en": "Selection"},

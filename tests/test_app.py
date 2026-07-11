@@ -154,6 +154,9 @@ def test_precision_selectbox_switches_to_the_per_page_rewrite(at, monkeypatch):
 
     def fake_run(**kwargs):
         calls.update(kwargs)
+        # Mirror agent.run: a (summary, markdown) tuple when return_markdown=True.
+        if kwargs.get("return_markdown"):
+            return "## Overview\nDone.", "# Nice Doc\n\nBody."
         return "## Overview\nDone."
 
     monkeypatch.setattr("src.agent.run", fake_run)
@@ -162,6 +165,22 @@ def test_precision_selectbox_switches_to_the_per_page_rewrite(at, monkeypatch):
     next(b for b in at.button if b.label == "Zusammenfassen").click().run()
 
     assert calls["fast"] is False
+    assert calls["return_markdown"] is True
+    assert at.session_state["converted_md"] == "# Nice Doc\n\nBody."
+    # The generated document Markdown is offered as its own download.
+    labels = {d.label for d in at.download_button}
+    assert "Erzeugtes Markdown herunterladen (.md)" in labels
+
+
+def test_fast_mode_has_no_generated_markdown_download(at, monkeypatch):
+    """The generated-Markdown download only appears for the precise option."""
+    monkeypatch.setattr("src.agent.run", lambda **kw: "## Overview\nDone.")
+    at.file_uploader[0].set_value(SAMPLE_UPLOAD).run()
+    next(b for b in at.button if b.label == "Zusammenfassen").click().run()
+
+    assert at.session_state["converted_md"] is None
+    labels = {d.label for d in at.download_button}
+    assert "Erzeugtes Markdown herunterladen (.md)" not in labels
 
 
 def test_downloads_render_from_a_stored_summary(at):

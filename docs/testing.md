@@ -14,7 +14,7 @@ Ollama server is required. 110 tests total (well under the 200 cap).
 | `test_language.py` | English/German detection, fallbacks |
 | `test_models.py` | registry shape, default, availability annotation, unreachable server |
 | `test_templates.py` | registry shape, default, unknown id |
-| `test_agent.py` | chunk split, single-pass vs map-reduce, progress monotonicity, Markdown-first ingest, `fast=True` skips the per-page rewrite, language resolution, empty input |
+| `test_agent.py` | chunk split, single-pass vs map-reduce, progress monotonicity, Markdown-first ingest, `fast=True` skips the per-page rewrite, `return_markdown` tuple, language resolution, empty input |
 | `test_export.py` | md/docx/pdf output validity, unicode, exporters registry |
 | `test_auth.py` | env-seeded store, hashed (never plaintext) storage, wrong password, unknown user, missing seed, corrupt/missing store |
 | `test_app.py` | UI helpers, accepted formats, config wiring, theme availability, the GUI-language toggle, and the single-window upload→summary flow driven through `AppTest` |
@@ -30,11 +30,15 @@ login form (no tabs); valid credentials sign in, invalid ones error, and
 default). Clicking `lang_btn` must flip `session_state["ui_lang"]`, relabel every
 surface in English, survive Logout, and reach `agent.run(ui_lang=...)`.
 `i18n.LANGUAGE_NAMES` is checked to cover every `LANGUAGE_LABELS` code. It also
-asserts that there are no tabs, that the sidebar exposes only the model selector,
-that language and template live in the main panel, the **Zusammenfassen**
-disabled-state (until a file is uploaded via `file_uploader.set_value`), and that
-clicking it calls `agent.run(filename=..., data=..., fast=True)` with no `text=`
-argument — i.e. the single click converts and summarizes in one pass.
+asserts that there are no tabs, that the sidebar has no selectbox, that the model,
+precision, language and template selectors all live in the main panel, the
+**Zusammenfassen** disabled-state (until a file is uploaded via
+`file_uploader.set_value`), and that clicking it calls
+`agent.run(filename=..., data=..., fast=True)` with no `text=` argument — i.e. the
+single click converts and summarizes in one pass. The precision selectbox is
+covered both ways: the precise option sends `fast=False, return_markdown=True` and
+surfaces the generated document Markdown as an **Erzeugtes Markdown herunterladen
+(.md)** download, while fast mode leaves `converted_md` `None` with no such button.
 
 ## Fixtures (`conftest.py`)
 In-memory sample documents (`txt_bytes`, `md_bytes`, `docx_bytes`, `pdf_bytes`,

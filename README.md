@@ -16,7 +16,8 @@ precise, LLM-formatted), the **summary language** (auto-detect by default) and
 1. **converts** the document to text — by default digital PDF pages are used
    verbatim (near-instant, byte-exact) and scanned pages (no text layer) are
    **OCR'd locally** by an Ollama vision model (no tesseract, no system
-   binaries); the *precise* option instead LLM-formats each text page; then
+   binaries); the *precise* option instead LLM-formats each text page and offers
+   that generated document Markdown as its own `.md` download; then
 2. **summarizes** it with the chosen local LLM.
 
 The summary is shown and downloadable as **Markdown, PDF, or DOCX**. There is no
