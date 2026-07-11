@@ -18,7 +18,7 @@ import signal
 
 import streamlit as st
 
-from src import agent, auth, export, extract, theme
+from src import agent, auth, export, extract, ollama_client, theme
 from src.config import load_config
 from src.i18n import DEFAULT_LANG, LANGUAGE_NAMES, LANGUAGES, pick, t
 from src.models import DEFAULT_MODEL_ID, annotate_availability
@@ -95,6 +95,14 @@ def _sidebar(lang: str) -> dict:
     st.sidebar.caption(pick(model["note"], lang))
     if not model["installed"]:
         st.sidebar.warning(t("not_installed", lang, tag=model["tag"]))
+
+    with st.sidebar.expander(t("advanced_options", lang), expanded=False):
+        if st.button(t("clear_vram", lang), key="clear_vram_btn"):
+            unloaded = ollama_client.unload_all(CFG.ollama_host)
+            if unloaded:
+                st.success(t("vram_cleared", lang, n=len(unloaded)))
+            else:
+                st.info(t("vram_empty", lang))
 
     st.sidebar.markdown("---")
     st.sidebar.caption(t("signed_in_as", lang, user=st.session_state["user"]))

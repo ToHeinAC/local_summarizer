@@ -61,6 +61,13 @@ STRINGS: dict[str, dict[str, str]] = {
     "exit_app": {"de": "App beenden", "en": "Exit app"},
     "shutting_down": {"de": "Wird beendet…", "en": "Shutting down…"},
     "logout": {"de": "Abmelden", "en": "Logout"},
+    "advanced_options": {"de": "Erweiterte Optionen", "en": "Advanced options"},
+    "clear_vram": {"de": "CUDA-Speicher leeren", "en": "Clear CUDA memory"},
+    "vram_cleared": {
+        "de": "{n} Modell(e) aus dem VRAM entladen.",
+        "en": "Unloaded {n} model(s) from VRAM.",
+    },
+    "vram_empty": {"de": "Keine Modelle geladen.", "en": "No models were loaded."},
     # --- tab 1: convert ----------------------------------------------------
     "convert_hint": {
         "de": (
