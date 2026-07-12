@@ -64,7 +64,7 @@ The current language lives in `st.session_state["ui_lang"]` (default `"de"`,
 read by `app._ui_lang()`). `app._language_toggle(container)` renders one button
 (`key="lang_btn"`) into the container it's given, labelled with the *other*
 language — `🌐 English` while in German — which flips the state and reruns. When
-signed in it sits at the bottom of the sidebar, directly above **Abmelden**; the
+signed in it sits at the bottom of the sidebar, directly below **Abmelden**; the
 same button is also drawn under the login form, so an anonymous visitor can switch
 before signing in. **Logout preserves `ui_lang`** while `st.session_state.clear()`
 drops everything else, so the chosen language survives a logout while nothing else
@@ -109,16 +109,16 @@ and `main()` renders that as an `st.error` instead of a traceback.
 ## Single-window workflow
 The main area is one panel — no tabs. Top to bottom:
 
-1. an intro caption;
+1. an intro caption, then a `---` divider;
 2. **quality parameters** in a 2-column row — the **Modell** selector (with its
    speed/quality stars and note, rendered by `_model_selector`) and, beside it
-   under a **PRÄZISION** caption, a `st.selectbox` choosing **Schnellmodus
+   under a **PRÄZISION PDF** caption, a `st.selectbox` choosing **Schnellmodus
    (wörtlich)** (default) or **Genaues Markdown (LLM)**, with a `help` tooltip
    explaining the cost. Below it, speed/quality stars flip with the choice —
    fast = Speed ★★★ / Quality ★☆☆, precise = Speed ★☆☆ / Quality ★★★;
-3. a file uploader accepting **PDF/DOCX/TXT/MD**;
-4. the summary **Sprache** (with an **Auswahl** caption below it) and **Vorlage**
-   selectboxes in a 2-column row;
+3. the summary **Sprache** (with an **Auswahl** caption below it) and **Vorlage**
+   selectboxes in a 2-column row, then a `---` divider;
+4. a file uploader accepting **PDF/DOCX/TXT/MD**;
 5. one primary **Zusammenfassen** button (disabled until a file is uploaded and
    the chosen model is installed).
 
@@ -144,12 +144,12 @@ fast mode that key is `None` and no such button shows). `summary` / `converted_m
 - `layout="wide"`, sidebar `expanded`.
 - Sidebar title `## 📝 KI-Zusammenfassung`, then `---` dividers. The sidebar holds
   only the **Advanced options** expander and, at the bottom, the signed-in caption
-  above two stacked full-width buttons: the GUI-language toggle, then **Abmelden**.
+  above two stacked full-width buttons: **Abmelden**, then the GUI-language toggle.
   Everything else — the model selector, the *summary* language and the template —
   lives in the main panel, next to the work it affects.
 - **Advanced options** (`st.expander`, collapsed) holds a *Clear CUDA memory*
   button (`ollama_client.unload_all`).
-- Section labels are ALL-CAPS `st.caption()` (MODELL / PRÄZISION / SPRACHE /
+- Section labels are ALL-CAPS `st.caption()` (MODELL / PRÄZISION PDF / SPRACHE /
   VORLAGE) above `label_visibility="collapsed"` widgets.
 - **Zusammenfassen** is `type="primary"` (filled green). Summary downloads are
   `use_container_width=True` in a 3-column row.
@@ -157,5 +157,5 @@ fast mode that key is `None` and no such button shows). `summary` / `converted_m
 - The language and logout buttons use `key="lang_btn"` / `key="logout_btn"`, which
   the CSS targets via `.st-key-*` to give them a boxed style instead of the
   transparent sidebar-nav look (the CSS also forces them `width: 100%`). Both are
-  full-width buttons stacked on their own lines: language toggle, then **Abmelden**.
+  full-width buttons stacked on their own lines: **Abmelden**, then language toggle.
   There is no exit button — see the sign-in gate note on why (tunnel preservation).

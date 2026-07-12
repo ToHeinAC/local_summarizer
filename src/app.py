@@ -87,7 +87,6 @@ def _sidebar(lang: str) -> None:
 
     st.sidebar.markdown("---")
     st.sidebar.caption(t("signed_in_as", lang, user=st.session_state["user"]))
-    _language_toggle(st.sidebar)  # full-width, above logout
     # Logout only clears session state (no process kill), so the app process —
     # and any Cloudflare tunnel in front of it — stays alive for the next user.
     if st.sidebar.button(t("logout", lang), key="logout_btn"):
@@ -95,6 +94,7 @@ def _sidebar(lang: str) -> None:
         st.session_state.clear()  # drop the signed-in user and their documents
         st.session_state["ui_lang"] = lang  # but keep the chosen GUI language
         st.rerun()
+    _language_toggle(st.sidebar)  # full-width, below logout
 
 
 def _model_selector(container, lang: str) -> dict:
@@ -203,6 +203,7 @@ def _downloads(summary: str, stem: str, lang: str) -> None:
 
 def _main_panel(lang: str) -> None:
     st.caption(t("intro_hint", lang))
+    st.markdown("---")
 
     # Quality parameters: model choice + the precision (LLM-Markdown) step.
     model_col, precision_col = st.columns(2)
@@ -222,10 +223,11 @@ def _main_panel(lang: str) -> None:
         t("speed_quality", lang, speed=_stars(speed), quality=_stars(quality))
     )
 
-    uploaded = st.file_uploader(t("upload_document", lang), type=ACCEPTED)
-
     opts = _summary_options(lang)
     opts["llm_format"] = llm_format
+    st.markdown("---")
+
+    uploaded = st.file_uploader(t("upload_document", lang), type=ACCEPTED)
 
     disabled = uploaded is None or not model["installed"]
     if st.button(t("summarize_button", lang), type="primary", disabled=disabled):

@@ -66,11 +66,17 @@ STRINGS: dict[str, dict[str, str]] = {
     "vram_empty": {"de": "Keine Modelle geladen.", "en": "No models were loaded."},
     # --- main panel: upload & summarize ------------------------------------
     "intro_hint": {
-        "de": "Modell, Sprache und Vorlage wählen, ein Dokument hochladen und zusammenfassen.",
-        "en": "Choose model, language and template, upload a document, and summarize.",
+        "de": (
+            "Modell, Präzission, Sprache und Vorlage wählen, ein Dokument "
+            "hochladen und zusammenfassen."
+        ),
+        "en": (
+            "Choose model, precision, language and template, upload a document, "
+            "and summarize."
+        ),
     },
     "upload_document": {"de": "Dokument hochladen", "en": "Upload a document"},
-    "precision_caption": {"de": "PRÄZISION", "en": "PRECISION"},
+    "precision_caption": {"de": "PRÄZISION PDF", "en": "PRECISION PDF"},
     "precision_label": {"de": "Präzision", "en": "Precision"},
     "fast_option": {"de": "Schnellmodus (wörtlich)", "en": "Fast mode (verbatim)"},
     "precise_option": {"de": "Genaues Markdown (LLM)", "en": "Precise Markdown (LLM)"},
