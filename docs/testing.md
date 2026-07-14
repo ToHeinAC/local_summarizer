@@ -1,8 +1,9 @@
 # Testing
 
 Run: `uv run pytest`. Tests are fully offline — the summarizer LLM, the
-conversion/OCR calls, and the model-availability query are monkeypatched, so no
-Ollama server is required. 110 tests total (well under the 200 cap).
+conversion/OCR calls, the model-availability query, and the portfolio's yfinance
+price fetch are all monkeypatched, so no Ollama server or network is required.
+139 tests total (well under the 200 cap).
 
 | File | Covers |
 |---|---|
@@ -17,8 +18,10 @@ Ollama server is required. 110 tests total (well under the 200 cap).
 | `test_agent.py` | chunk split, single-pass vs map-reduce, progress monotonicity, Markdown-first ingest, `fast=True` skips the per-page rewrite, `return_markdown` tuple, language resolution, empty input |
 | `test_export.py` | md/docx/pdf output validity, unicode, exporters registry |
 | `test_auth.py` | env-seeded store, hashed (never plaintext) storage, wrong password, unknown user, missing seed, corrupt/missing store |
-| `test_app.py` | UI helpers, accepted formats, config wiring, theme availability, the GUI-language toggle, and the single-window upload→summary flow driven through `AppTest` |
+| `test_app.py` | UI helpers, accepted formats, config wiring, theme availability, the GUI-language toggle, the single-window upload→summary flow, and the portfolio section (mode switch, CSV upload, price fetch, table/download, manual fallback) via `AppTest` |
 | `test_i18n.py` | catalogue key/placeholder parity across languages, `t` formatting + fallback, `pick` |
+| `test_portfolio.py` | CSV parse (headers, bad numbers, blanks, empty), metrics, partial pricing, each 100-bagger recommendation branch + precedence, snapshot round-trip |
+| `test_prices.py` | mocked yfinance success, ticker upper-case/dedupe, offline (`_yf=None`) fallback, fetch-error and missing-price → `None` |
 
 ## UI tests
 `test_app.py` runs the real Streamlit script via `streamlit.testing.v1.AppTest`.

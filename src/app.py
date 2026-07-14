@@ -18,7 +18,7 @@ import os
 
 import streamlit as st
 
-from src import agent, auth, export, ollama_client, theme
+from src import agent, auth, export, ollama_client, portfolio, prices, theme
 from src.config import load_config
 from src.i18n import DEFAULT_LANG, LANGUAGE_NAMES, LANGUAGES, pick, t
 from src.models import DEFAULT_MODEL_ID, annotate_availability
@@ -27,6 +27,15 @@ from src.templates import DEFAULT_TEMPLATE_ID, list_templates
 
 CFG = load_config()
 ACCEPTED = ["pdf", "docx", "txt", "md"]
+
+# Sidebar mode ids and the recommendation-label lookup for the portfolio table.
+MODES = ("summarize", "portfolio")
+_RECO_KEY = {
+    portfolio.HOLD: "reco_hold",
+    portfolio.ADD: "reco_add",
+    portfolio.TRIM: "reco_trim",
+    portfolio.REVIEW: "reco_review",
+}
 
 
 def _stars(n: int) -> str:
@@ -73,8 +82,18 @@ def _login_gate() -> None:
     st.stop()
 
 
-def _sidebar(lang: str) -> None:
+def _sidebar(lang: str) -> str:
     st.sidebar.markdown(f"## 📝 {t('app_title', lang)}")
+    st.sidebar.markdown("---")
+
+    st.sidebar.caption(t("nav_caption", lang))
+    mode = st.sidebar.radio(
+        t("nav_caption", lang),
+        MODES,
+        format_func=lambda m: t(f"mode_{m}", lang),
+        label_visibility="collapsed",
+        key="mode_radio",
+    )
     st.sidebar.markdown("---")
 
     with st.sidebar.expander(t("advanced_options", lang), expanded=False):
@@ -95,6 +114,7 @@ def _sidebar(lang: str) -> None:
         st.session_state["ui_lang"] = lang  # but keep the chosen GUI language
         st.rerun()
     _language_toggle(st.sidebar)  # full-width, below logout
+    return mode
 
 
 def _model_selector(container, lang: str) -> dict:
@@ -250,6 +270,106 @@ def _main_panel(lang: str) -> None:
         _downloads(summary, stem, lang)
 
 
+# --- portfolio -------------------------------------------------------------
+def _money(value: float | None) -> str:
+    return "—" if value is None else f"{value:,.2f}"
+
+
+def _pct(value: float | None) -> str:
+    return "—" if value is None else f"{value * 100:+.1f}%"
+
+
+def _mult(value: float | None) -> str:
+    return "—" if value is None else f"{value:.2f}×"
+
+
+def _manual_prices(holdings: list, fetched: dict, lang: str) -> dict:
+    """Number inputs for any ticker without a live price; returns the entered map."""
+    unpriced = list(dict.fromkeys(h.ticker for h in holdings if not fetched.get(h.ticker)))
+    if not unpriced:
+        return {}
+    if "pf_prices" in st.session_state:  # only warn after a fetch was attempted
+        if len(unpriced) == len({h.ticker for h in holdings}):
+            st.warning(t("prices_offline", lang))
+        else:
+            st.warning(t("prices_partial", lang, n=len(unpriced)))
+    st.caption(t("manual_prices_caption", lang))
+    cols = st.columns(min(len(unpriced), 4))
+    manual: dict[str, float] = {}
+    for i, ticker in enumerate(unpriced):
+        value = cols[i % len(cols)].number_input(
+            t("manual_price_label", lang, ticker=ticker),
+            min_value=0.0, value=0.0, step=1.0, key=f"pf_manual_{ticker}",
+        )
+        if value > 0:
+            manual[ticker] = value
+    return manual
+
+
+def _portfolio_table(port: portfolio.Portfolio, lang: str) -> None:
+    rows = [
+        {
+            t("col_ticker", lang): p.holding.ticker,
+            t("col_qty", lang): p.holding.quantity,
+            t("col_buy", lang): p.holding.buy_price,
+            t("col_price", lang): _money(p.current_price),
+            t("col_value", lang): _money(p.market_value),
+            t("col_gain_pct", lang): _pct(p.gain_pct),
+            t("col_multiple", lang): _mult(p.multiple),
+            t("col_weight", lang): _pct(p.weight),
+            t("col_reco", lang): t(_RECO_KEY[p.recommendation], lang),
+        }
+        for p in port.positions
+    ]
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.caption(t("reco_legend", lang))
+
+
+def _portfolio_panel(lang: str) -> None:
+    st.caption(t("portfolio_intro", lang))
+    st.download_button(
+        t("portfolio_template", lang),
+        data=portfolio.CSV_TEMPLATE.encode("utf-8"),
+        file_name="portfolio_template.csv",
+        mime="text/csv",
+        key="pf_template_btn",
+    )
+    st.markdown("---")
+
+    uploaded = st.file_uploader(t("portfolio_upload", lang), type=["csv"], key="pf_upload")
+    if uploaded is None:
+        st.info(t("portfolio_upload_hint", lang))
+        return
+    try:
+        holdings = portfolio.parse_csv(uploaded.getvalue().decode("utf-8", errors="replace"))
+    except ValueError as exc:
+        st.error(t("portfolio_parse_error", lang, error=exc))
+        return
+
+    if st.button(t("update_prices", lang), key="pf_update_btn"):
+        st.session_state["pf_prices"] = prices.fetch_prices([h.ticker for h in holdings])
+
+    fetched = st.session_state.get("pf_prices", {})
+    manual = _manual_prices(holdings, fetched, lang)
+    merged = {h.ticker: (fetched.get(h.ticker) or manual.get(h.ticker)) for h in holdings}
+    port = portfolio.build_portfolio(holdings, merged)
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric(t("total_cost", lang), _money(port.total_cost))
+    c2.metric(t("total_value", lang), _money(port.total_value))
+    c3.metric(t("total_gain", lang), _money(port.total_gain), _pct(port.total_gain_pct))
+
+    st.subheader(t("portfolio_positions", lang))
+    _portfolio_table(port, lang)
+    st.download_button(
+        t("download_snapshot", lang),
+        data=portfolio.snapshot_csv(port).encode("utf-8"),
+        file_name="portfolio.csv",
+        mime="text/csv",
+        key="pf_snapshot_btn",
+    )
+
+
 def main() -> None:
     lang = _ui_lang()
     st.set_page_config(
@@ -265,10 +385,14 @@ def main() -> None:
         st.error(t("seed_missing", lang, vars=" / ".join(auth.SEED_USERS.values())))
         st.stop()
     _login_gate()
-    _sidebar(lang)
+    mode = _sidebar(lang)
 
-    st.title(t("app_title", lang))
-    _main_panel(lang)
+    if mode == "portfolio":
+        st.title(t("portfolio_title", lang))
+        _portfolio_panel(lang)
+    else:
+        st.title(t("app_title", lang))
+        _main_panel(lang)
 
 
 if __name__ == "__main__":

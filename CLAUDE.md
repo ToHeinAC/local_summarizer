@@ -5,15 +5,15 @@ The shared, vendor-neutral collaboration rules for AI coding tools live in [AGEN
 @AGENTS.md
 
 ## Project at a glance
-Local, offline document summarizer: Streamlit UI → Markdown conversion (vision OCR for scanned PDFs) → LangGraph map-reduce agent → local Ollama LLM → Markdown summary downloadable as `.md` / `.pdf` / `.docx`. No cloud APIs, no embeddings, no vector DB.
+Local, offline document summarizer: Streamlit UI → Markdown conversion (vision OCR for scanned PDFs) → LangGraph map-reduce agent → local Ollama LLM → Markdown summary downloadable as `.md` / `.pdf` / `.docx`. No cloud *LLM* APIs, no embeddings, no vector DB. A second sidebar section (**📈 Portfolio**, phase 4) tracks a self-chosen stock portfolio — plain Python, no LLM — with 100-bagger, hold-biased recommendations; its only network touch is `yfinance` for live quotes (market data, not an LLM API), which degrades to manual entry offline. See [docs/portfolio.md](docs/portfolio.md).
 
 ```bash
 uv sync
 uv run streamlit run src/app.py --server.port 8530   # port per PRD.md
-uv run pytest                                        # 111 tests, fully offline
+uv run pytest                                        # 139 tests, fully offline
 ```
 
-**Hard boundary:** LangChain/LangGraph may be imported *only* by `src/agent.py` and `src/tools.py`. Every other module is plain Python — `src/ollama_client.py` reaches Ollama through the plain `ollama` package, which is fine. All prompt strings are named constants in `src/prompts.py`.
+**Hard boundary:** LangChain/LangGraph may be imported *only* by `src/agent.py` and `src/tools.py`. Every other module is plain Python — `src/ollama_client.py` reaches Ollama through the plain `ollama` package, and `src/prices.py` reaches Yahoo Finance through `yfinance`; neither is LangChain, so both are fine. All prompt strings are named constants in `src/prompts.py`.
 
 ## Documentation map
 Start with [IMPLEMENTATION.md](IMPLEMENTATION.md) @IMPLEMENTATION.md — current state, module map, key decisions. Deep detail per component:
@@ -25,6 +25,7 @@ Start with [IMPLEMENTATION.md](IMPLEMENTATION.md) @IMPLEMENTATION.md — current
 - [docs/models.md](docs/models.md) @docs/models.md — Ollama model registry, availability check
 - [docs/templates.md](docs/templates.md) @docs/templates.md — summary template registry, how to add one
 - [docs/export.md](docs/export.md) @docs/export.md — md/pdf/docx rendering, PDF font fallback
+- [docs/portfolio.md](docs/portfolio.md) @docs/portfolio.md — stock portfolio: CSV round-trip, yfinance/manual prices, 100-bagger rules
 - [docs/testing.md](docs/testing.md) @docs/testing.md — test map and fixtures
 
 [PRD.md](PRD.md) holds the original goals and acceptance criteria.
