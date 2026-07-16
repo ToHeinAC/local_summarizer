@@ -26,13 +26,7 @@ the same way `models.py` already queries `GET /api/tags` over `urllib`.
    bytes → Markdown, including vision OCR for scanned PDF pages.
    See [ingestion.md](ingestion.md).
 4. **Services (plain Python)** — `i18n.py`, `language.py`, `templates.py`,
-   `models.py`, `export.py`, `config.py`, `prompts.py`, and the portfolio pair
-   `portfolio.py` (CSV round-trip, metrics, 100-bagger rules) + `prices.py`
-   (yfinance quotes). The portfolio tracker is a second UI section with **no LLM**,
-   so it stays entirely on this plain-Python side. `prices.py` is the one place
-   the app reaches the network for *market data* — not a cloud LLM API, so the
-   LangChain boundary is untouched, though it relaxes the "offline" claim for that
-   feature (it degrades to manual entry offline). See [portfolio.md](portfolio.md).
+   `models.py`, `export.py`, `config.py`, `prompts.py`.
 
 ## Data flow
 ```

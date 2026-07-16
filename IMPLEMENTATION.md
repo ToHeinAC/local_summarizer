@@ -5,10 +5,9 @@ detail lives in [docs/](docs/). See [PRD.md](PRD.md) for goals and
 [AGENTS.md](AGENTS.md) for collaboration rules.
 
 ## Status
-All planned features implemented and tested (139 tests passing). End-to-end
-verified against a live Ollama server, including OCR of a scanned PDF. Phase 4
-adds a **portfolio tracker** (a second sidebar section) alongside the summarizer;
-see [docs/portfolio.md](docs/portfolio.md).
+All planned features implemented and tested (116 tests passing). End-to-end
+verified against a live Ollama server, including OCR of a scanned PDF. The app
+does one thing: summarize a document.
 
 ## Architecture (one screen)
 Layered. LangChain/LangGraph are confined to the **agent layer**
@@ -16,24 +15,21 @@ Layered. LangChain/LangGraph are confined to the **agent layer**
 `ollama_client.py` uses the plain `ollama` package, not LangChain.
 
 ```
-app.py ─ Streamlit UI: login gate, sidebar section switch, progress, downloads, logout  (no LangChain)
+app.py ─ Streamlit UI: login gate, progress, downloads, logout  (no LangChain)
   ├─ auth.py        bcrypt user store (data/users.json)
   ├─ i18n.py        German (default) / English UI strings
   ├─ theme.py       Forest palette + injected CSS
-  ├─ [Section 📈 Portfolio] ─ plain Python, no LLM
-  │    ├─ portfolio.py   CSV round-trip, metrics, 100-bagger rules
-  │    └─ prices.py      yfinance quotes (network) + manual fallback
-  └─ [Section 📝 Summary] ─ agent.run(filename=…, fast=True) ─ LangGraph: ingest→chunk→map→reduce→finalize
-       ├─ extract.py       file bytes → plain text   (called inside ingest)
-       │    └─ md_convert.py  PDF per-page verbatim/OCR, DOCX→MD
-       │         └─ ollama_client.py  vision OCR (rewrite unused in fast mode)
-       ├─ tools.py         ChatOllama wrapper        (LangChain OK)
-       ├─ language.py      detect source language
-       ├─ templates.py     template registry
-       ├─ models.py        model registry + availability
-       ├─ export.py        summary → md/pdf/docx
-       ├─ prompts.py       all prompt constants
-       └─ config.py        dotenv config
+  └─ agent.run(filename=…, fast=True) ─ LangGraph: ingest→chunk→map→reduce→finalize
+     ├─ extract.py       file bytes → plain text   (called inside ingest)
+     │    └─ md_convert.py  PDF per-page verbatim/OCR, DOCX→MD
+     │         └─ ollama_client.py  vision OCR (rewrite unused in fast mode)
+     ├─ tools.py         ChatOllama wrapper        (LangChain OK)
+     ├─ language.py      detect source language
+     ├─ templates.py     template registry
+     ├─ models.py        model registry + availability
+     ├─ export.py        summary → md/pdf/docx
+     ├─ prompts.py       all prompt constants
+     └─ config.py        dotenv config
 ```
 
 Sign-in gates everything: `app.py` calls `auth.verify()` before the window is
@@ -73,22 +69,17 @@ of the agent and ingestion layers. Details: [docs/architecture.md](docs/architec
 | `src/export.py` | Markdown → md/pdf/docx bytes | [export](docs/export.md) |
 | `src/prompts.py` | Named prompt constants | [agent](docs/agent.md) |
 | `src/config.py` | dotenv-backed config | — |
-| `src/portfolio.py` | Portfolio CSV round-trip, metrics, 100-bagger rules | [portfolio](docs/portfolio.md) |
-| `src/prices.py` | yfinance quotes + offline/manual fallback | [portfolio](docs/portfolio.md) |
 
 ## Key decisions
-- **Portfolio tracker (phase 4)**: a second sidebar section beside the
-  summarizer, for keeping a self-chosen stock portfolio in view rather than
-  generating trade signals. Plain Python, **no LLM/LangChain** (`portfolio.py`,
-  `prices.py`). Persistence is **CSV only** — upload holdings, download a valued
-  snapshot; no server-side store. Recommendations follow the *100 Baggers*
-  research and are deliberately **hold-biased** (the enemy is selling too soon):
-  HOLD by default, ADD on a dip, TRIM only on concentration risk, REVIEW only on
-  a user-set `thesis_broken` flag. Live quotes come from **`yfinance`** — the one
-  network touch for market data; it degrades to **manual price entry** offline.
-  Not a cloud LLM API, so the LangChain boundary is intact; it does relax the
-  "fully offline" claim for this feature only (see Known constraints).
-  See [docs/portfolio.md](docs/portfolio.md).
+- **Summarization only**: the app has one job and one window — no sections, no
+  sidebar mode switch. A stock-portfolio tracker briefly lived here as a second
+  sidebar section (phase 4, commit `2f1fa12`) and was removed again: it shared no
+  domain, no data and no dependency with summarization, and it forced a mode
+  radio onto an otherwise single-purpose tool. Its home is the sibling
+  **hundred-bagger** app, whose DuckDB schema was already designed around exactly
+  that feature (its Phase 4). Dropping it also removed this app's only network
+  dependency (`yfinance`), so "fully offline" is unqualified again — do not
+  reintroduce a network call here without revisiting that claim.
 - **Authentication**: a bcrypt-hashed user store in `data/users.json` (gitignored),
   seeded on first run from the `SEED_PW_*` variables in `.env` (`auth.SEED_USERS`
   maps each account to its variable), so no password is ever committed. Ported from
@@ -197,9 +188,3 @@ the watchdog's own command line and it would kill itself.
   `tunnel.sh`) before exposing it publicly.
 - The theme's webfonts load from Google Fonts on first paint; without network
   access the app still runs and falls back to `system-ui` / `Georgia`.
-- **Offline caveat (portfolio only)**: the summarizer is fully offline, but the
-  portfolio tracker's **Kurse aktualisieren** button fetches live quotes from
-  Yahoo Finance via `yfinance`. It is button-driven (never automatic) and
-  degrades to manual price entry offline, so the app still runs without network —
-  but live prices need one. This is a market-data call, not a cloud LLM API, so
-  the LangChain/LLM boundary is unaffected.

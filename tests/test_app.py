@@ -101,9 +101,11 @@ def test_single_window_has_no_tabs(at):
     assert not at.tabs
 
 
-def test_sidebar_has_no_selectbox(at):
-    """Model, language and template all live in the main panel now."""
+def test_sidebar_has_no_selectbox_or_radio(at):
+    """Model, language and template all live in the main panel; the app is
+    summarization only, so the sidebar offers no section choice either."""
     assert not at.sidebar.selectbox
+    assert not at.sidebar.radio
 
 
 def test_main_panel_offers_model_language_and_template(at):
@@ -240,51 +242,3 @@ def test_every_summary_language_has_a_name_in_both_guis():
     assert set(i18n.LANGUAGE_NAMES) == set(app.LANGUAGE_LABELS)
     for names in i18n.LANGUAGE_NAMES.values():
         assert set(names) == set(i18n.LANGUAGES)
-
-
-# --- portfolio mode ---------------------------------------------------------
-
-PF_CSV = "ticker,quantity,buy_price\nAAPL,10,100\nMSFT,5,200\n"
-PF_UPLOAD = ("portfolio.csv", PF_CSV.encode("utf-8"), "text/csv")
-
-
-@pytest.fixture
-def pf(at):
-    """The app, signed in, switched to the Portfolio section."""
-    at.sidebar.radio[0].set_value("portfolio").run()
-    return at
-
-
-def test_mode_switch_shows_the_portfolio_panel(pf):
-    assert not any(b.label == "Zusammenfassen" for b in pf.button)
-    assert pf.file_uploader[0].label == "Portfolio hochladen (CSV)"
-
-
-def test_portfolio_prompts_for_an_upload(pf):
-    assert any("Lade eine CSV" in i.value for i in pf.info)
-    assert not pf.dataframe
-
-
-def test_portfolio_bad_csv_shows_an_error(pf):
-    bad = ("bad.csv", b"ticker,quantity\nAAPL,1\n", "text/csv")
-    pf.file_uploader[0].set_value(bad).run()
-    assert any("missing required column" in e.value for e in pf.error)
-
-
-def test_portfolio_renders_table_and_download(pf, monkeypatch):
-    monkeypatch.setattr("src.prices.fetch_prices", lambda tickers: {"AAPL": 150.0, "MSFT": 200.0})
-    pf.file_uploader[0].set_value(PF_UPLOAD).run(timeout=10)
-    next(b for b in pf.button if b.key == "pf_update_btn").click().run(timeout=10)
-
-    assert pf.session_state["pf_prices"] == {"AAPL": 150.0, "MSFT": 200.0}
-    assert pf.dataframe  # positions table rendered
-    assert any(d.key == "pf_snapshot_btn" for d in pf.download_button)
-
-
-def test_portfolio_offline_falls_back_to_manual_entry(pf, monkeypatch):
-    monkeypatch.setattr("src.prices.fetch_prices", lambda tickers: {"AAPL": None, "MSFT": None})
-    pf.file_uploader[0].set_value(PF_UPLOAD).run(timeout=10)
-    next(b for b in pf.button if b.key == "pf_update_btn").click().run(timeout=10)
-
-    assert any("offline" in w.value for w in pf.warning)
-    assert {n.label for n in pf.number_input} == {"AAPL Kurs", "MSFT Kurs"}

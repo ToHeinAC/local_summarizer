@@ -29,20 +29,6 @@ the sidebar, and a live **progress bar** across the whole run. **Abmelden**
 there is no in-app exit button, so stop the server from the terminal
 (`./tunnel.sh stop`) to avoid tearing a tunnel down unexpectedly.
 
-### 📈 Portfolio tracker
-A second sidebar section keeps a self-chosen **stock portfolio** in view — built
-to *not lose track* of long-term picks, following the *100 Baggers* philosophy
-("the chief enemy of a 100-bagger is selling too soon"), so it is deliberately
-**hold-biased** and is **not investment advice**. Upload holdings as a **CSV**
-(`ticker, quantity, buy_price`, optional `currency`/`thesis_broken`), press
-**Kurse aktualisieren** to pull live prices, and see each position's value, gain,
-x-multiple toward 100, weight, and a colour-coded recommendation (🟢 Hold ·
-🔵 Add on a dip · 🟠 Trim on concentration · 🔴 Review if the thesis broke).
-Download a valued **snapshot CSV** for your records. Live quotes use
-[`yfinance`](https://github.com/ranaroussi/yfinance) (the one network call for
-market data — **not** a cloud LLM API); offline, it falls back to **manual price
-entry**. See [docs/portfolio.md](docs/portfolio.md).
-
 ## Requirements
 - Python ≥ 3.12, [`uv`](https://docs.astral.sh/uv/), and [Ollama](https://ollama.com).
 - Pull at least the default summarization model:
