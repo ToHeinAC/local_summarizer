@@ -30,5 +30,5 @@ Start with [IMPLEMENTATION.md](IMPLEMENTATION.md) @IMPLEMENTATION.md — current
 [PRD.md](PRD.md) holds the original goals and acceptance criteria.
 
 ## Claude Code specifics
-- Slash commands: `.claude/commands/` (`commit-git`, `create-prd`, `documentation-update`). Skills: `.claude/skills/` (`code_review`).
+- Slash commands: `.claude/commands/` (`commit-git`, `create-prd`, `documentation-update`). Skills: `.claude/skills/` (`code_review`, `restart-app`, `grill-me`).
 - Permissions/config: shared safe allows are committed in `.claude/settings.json`; machine-personal ones stay in `.claude/settings.local.json` (gitignored).
