@@ -37,13 +37,23 @@ TEMPLATES: list[dict] = [
         "id": "detailed",
         "label": {"de": "Ausführlich", "en": "Detailed"},
         "description": {
-            "de": "Abschnittsweise Zusammenfassung, die die Struktur erhält.",
-            "en": "Section-by-section summary preserving structure.",
+            "de": "Abschnittsweise Zusammenfassung mit Zahlen, Paragraphen- "
+            "und Quellenangaben.",
+            "en": "Section-by-section summary keeping figures, clause numbers "
+            "and references.",
         },
         "structure": (
             "A '## Summary' overview, then one '### ' subsection per major "
-            "topic in the document, each with 5-15 sentences. End with a "
-            "'## Conclusion' section."
+            "topic in the document, each with 5-15 sentences. Give every major "
+            "topic in the content its own subsection; do not merge distinct "
+            "topics together and do not leave one out. End with a "
+            "'## Conclusion' section. Throughout, cite the source's own anchors "
+            "inline and verbatim: clause and section numbers, "
+            "figure/table/appendix identifiers, key quantities with units, and "
+            "references to other documents or standards — e.g. "
+            "\"gemäß § 29 Abs. 2 ...\", \"Abbildung 4 zeigt ...\", "
+            "\"nach DIN 25457\". Cite only identifiers that appear in the "
+            "content; never invent or guess one."
         ),
     },
     {

@@ -32,6 +32,19 @@ def test_reduce_prompt_has_summaries_slot():
     assert "{summaries}" in prompts.REDUCE_PROMPT
 
 
+def test_map_prompt_keeps_source_anchors_verbatim():
+    # Finalize can only cite identifiers the map stage passed through.
+    assert "verbatim" in prompts.MAP_PROMPT
+    for anchor in ("§", "Abbildung", "DIN"):
+        assert anchor in prompts.MAP_PROMPT
+
+
+def test_reduce_prompt_keeps_source_anchors():
+    # Reduce is the second place identifiers vanish before finalize sees them.
+    assert "§" in prompts.REDUCE_PROMPT
+    assert "unchanged" in prompts.REDUCE_PROMPT
+
+
 def test_finalize_prompt_has_all_slots():
     for slot in ("{language}", "{template}", "{content}"):
         assert slot in prompts.FINALIZE_PROMPT

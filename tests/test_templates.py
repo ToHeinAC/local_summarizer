@@ -17,6 +17,13 @@ def test_registry_shape():
         assert template["structure"].strip()
 
 
+def test_detailed_template_cites_source_anchors():
+    structure = templates.get_template("detailed")["structure"]
+    assert "verbatim" in structure
+    assert "§" in structure
+    assert "never invent" in structure
+
+
 def test_get_unknown_template_raises():
     with pytest.raises(KeyError):
         templates.get_template("nope")

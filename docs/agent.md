@@ -21,6 +21,12 @@ finalize) fits well under 8192, so the cap costs no precision.
 4. **reduce** — only when >1 partial summary. Combines with `REDUCE_PROMPT`
    hierarchically in batches of `REDUCE_BATCH=8` until one summary remains,
    so very large documents stay within context. Progress 0.85.
+
+   Both prompts require source anchors — §/clause numbers, figure/table/appendix
+   identifiers, quantities with units, referenced documents and standards — to be
+   carried through **verbatim**. `_finalize` only ever sees the reduced summary,
+   so anything these two template-agnostic nodes drop can never be cited; the
+   `detailed` template's inline citations depend on this.
 5. **finalize** — applies the chosen template `structure` and target language
    via `FINALIZE_PROMPT`, producing the final Markdown. Progress 0.90→1.0.
 

@@ -6,8 +6,20 @@ Never embed prompt strings inline in other modules. Placeholders use
 
 MAP_PROMPT = """You are summarizing one section of a longer document.
 Write a faithful, self-contained summary of the section below.
-Keep every key fact, name, number, and conclusion. Do not add information
-that is not present. Output plain prose, no preamble.
+Keep every key fact, name, number, and conclusion.
+
+Copy the following verbatim wherever they appear — they are the anchors a reader
+needs to find the passage in the source:
+1. Quantities with their units (12,4 mg/kg, 3,2 Mio. EUR, 15 %).
+2. Section and clause identifiers (§ 29 Abs. 2, Art. 5, Clause 4.1, 3.2.1).
+3. Figure, table and appendix identifiers (Abbildung 4, Table 2, Anhang B).
+4. References to other documents, standards and norms (DIN 25457, VDI 2263,
+   "Gutachten vom 12.03.2024").
+5. Names of people and organisations, and dates.
+
+Reproduce each one exactly as written: do not renumber, round, translate, or
+abbreviate. Keep every fact in the same sentence as the identifier it belongs to.
+Do not add information that is not present. Output plain prose, no preamble.
 
 SECTION:
 {chunk}
@@ -16,6 +28,13 @@ SECTION:
 REDUCE_PROMPT = """You are combining several partial summaries of one document
 into a single coherent summary. Merge overlapping points, remove repetition,
 and preserve every distinct key fact and conclusion. Do not add new information.
+
+Every identifier, quantity and reference that appears in the partial summaries
+must appear in your combined summary, unchanged: section and clause numbers
+(§ 29 Abs. 2, Art. 5), figure/table/appendix identifiers, quantities with their
+units, references to other documents and standards, names and dates. Merging two
+mentions of the same identifier is fine; dropping one is not.
+
 Output plain prose, no preamble.
 
 PARTIAL SUMMARIES:

@@ -8,7 +8,7 @@ information density.
 |---|---|---|
 | `executive` | Management (knapp) / Executive (terse) | One 3-5 sentence paragraph, no headings |
 | `standard` *(default)* | Standard | `## Overview` + `## Key Points` bullets |
-| `detailed` | Ausführlich / Detailed | Overview + per-topic `### ` subsections + conclusion |
+| `detailed` | Ausführlich / Detailed | Overview + per-topic `### ` subsections + conclusion, with inline verbatim citations (§/clause, figure/table, quantities, referenced documents) |
 | `bullets` | Stichpunkte / Bullet key-points | Flat 6-20 bullet takeaways |
 | `action_items` | Maßnahmen / Action items | `## Decisions` + `## Action Items` lists |
 
