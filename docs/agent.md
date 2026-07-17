@@ -26,7 +26,9 @@ finalize) fits well under 8192, so the cap costs no precision.
    identifiers, quantities with units, referenced documents and standards — to be
    carried through **verbatim**. `_finalize` only ever sees the reduced summary,
    so anything these two template-agnostic nodes drop can never be cited; the
-   `detailed` template's inline citations depend on this.
+   `detailed_refs` template's inline citations depend on this. The flip side:
+   every template gets the anchor-rich content whether or not it wants it, which
+   is why `detailed` suppresses the citations in its own `structure`.
 5. **finalize** — applies the chosen template `structure` and target language
    via `FINALIZE_PROMPT`, producing the final Markdown. Progress 0.90→1.0.
 

@@ -17,11 +17,25 @@ def test_registry_shape():
         assert template["structure"].strip()
 
 
-def test_detailed_template_cites_source_anchors():
-    structure = templates.get_template("detailed")["structure"]
+def test_detailed_refs_template_cites_source_anchors():
+    structure = templates.get_template("detailed_refs")["structure"]
     assert "verbatim" in structure
     assert "§" in structure
     assert "never invent" in structure
+
+
+def test_detailed_template_stays_plain():
+    """The plain variant keeps the section shape but suppresses inline anchors.
+
+    Map/reduce feed it anchor-rich content regardless of template, so without
+    the opt-out it would read like detailed_refs.
+    """
+    structure = templates.get_template("detailed")["structure"]
+    for shape in ("## Summary", "### ", "## Conclusion"):
+        assert shape in structure
+    assert "do not anchor" in structure
+    assert "verbatim" not in structure
+    assert "§" not in structure
 
 
 def test_get_unknown_template_raises():

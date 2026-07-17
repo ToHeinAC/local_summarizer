@@ -37,6 +37,27 @@ TEMPLATES: list[dict] = [
         "id": "detailed",
         "label": {"de": "Ausführlich", "en": "Detailed"},
         "description": {
+            "de": "Abschnittsweise Zusammenfassung, die die Struktur erhält.",
+            "en": "Section-by-section summary preserving structure.",
+        },
+        # MAP_PROMPT and REDUCE_PROMPT carry every identifier through verbatim
+        # for the detailed_refs template, so this one must opt out explicitly.
+        "structure": (
+            "A '## Summary' overview, then one '### ' subsection per major "
+            "topic in the document, each with 5-15 sentences. End with a "
+            "'## Conclusion' section. Write flowing prose: do not anchor "
+            "statements with inline clause, figure, table or document "
+            "identifiers; name an identifier only when it is itself the "
+            "subject of what you are describing."
+        ),
+    },
+    {
+        "id": "detailed_refs",
+        "label": {
+            "de": "Ausführlich (mit Refs)",
+            "en": "Detailed (with references)",
+        },
+        "description": {
             "de": "Abschnittsweise Zusammenfassung mit Zahlen, Paragraphen- "
             "und Quellenangaben.",
             "en": "Section-by-section summary keeping figures, clause numbers "

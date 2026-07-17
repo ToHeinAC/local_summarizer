@@ -2,7 +2,7 @@
 
 Run: `uv run pytest`. Tests are fully offline — the summarizer LLM, the
 conversion/OCR calls and the model-availability query are all monkeypatched, so
-no Ollama server or network is required. 116 tests total (well under the 200 cap).
+no Ollama server or network is required. 117 tests total (well under the 200 cap).
 
 | File | Covers |
 |---|---|
@@ -13,7 +13,7 @@ no Ollama server or network is required. 116 tests total (well under the 200 cap
 | `test_theme.py` | palette keys, CSS `<style>` block, font imports, icon-font guard |
 | `test_language.py` | English/German detection, fallbacks |
 | `test_models.py` | registry shape, default, availability annotation, unreachable server |
-| `test_templates.py` | registry shape, default, unknown id |
+| `test_templates.py` | registry shape, default, unknown id, `detailed_refs` cites source anchors while `detailed` suppresses them |
 | `test_agent.py` | chunk split, single-pass vs map-reduce, progress monotonicity, Markdown-first ingest, `fast=True` skips the per-page rewrite, `return_markdown` tuple, language resolution, empty input |
 | `test_export.py` | md/docx/pdf output validity, unicode, exporters registry |
 | `test_auth.py` | env-seeded store, hashed (never plaintext) storage, wrong password, unknown user, missing seed, corrupt/missing store |

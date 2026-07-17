@@ -5,7 +5,7 @@ detail lives in [docs/](docs/). See [PRD.md](PRD.md) for goals and
 [AGENTS.md](AGENTS.md) for collaboration rules.
 
 ## Status
-All planned features implemented and tested (116 tests passing). End-to-end
+All planned features implemented and tested (117 tests passing). End-to-end
 verified against a live Ollama server, including OCR of a scanned PDF. The app
 does one thing: summarize a document.
 
