@@ -13,6 +13,10 @@ uv run streamlit run src/app.py --server.port 8530   # port per PRD.md
 uv run pytest                                        # 117 tests, fully offline
 ```
 
+Open **<http://localhost:8530/smrz/>**, not the port root — that 404s.
+`.streamlit/config.toml` sets `baseUrlPath = "smrz"` to match the nginx path that
+serves this app at <https://ai.brenk.com/smrz/>. Change one, change both.
+
 **Hard boundary:** LangChain/LangGraph may be imported *only* by `src/agent.py` and `src/tools.py`. Every other module is plain Python — `src/ollama_client.py` reaches Ollama through the plain `ollama` package, which is not LangChain, so it is fine. All prompt strings are named constants in `src/prompts.py`.
 
 ## Documentation map

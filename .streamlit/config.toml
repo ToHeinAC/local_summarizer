@@ -8,3 +8,11 @@ font                     = "sans serif"
 [server]
 port = 8530
 runOnSave = true
+# Served under https://ai.brenk.com/smrz/ by the nginx reverse proxy. This must
+# match the proxy's path, or the app renders blank: Streamlit's asset links are
+# relative, and without the base path they resolve at the site root.
+baseUrlPath = "smrz"
+# Overrides enableXsrfProtection = false in ~/.streamlit/config.toml, for this
+# app only. That global default was harmless behind a rotating tunnel URL; this
+# app now has a permanent public URL and a sign-in.
+enableXsrfProtection = true

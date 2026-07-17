@@ -56,6 +56,10 @@ cp .env.example .env            # optional: adjust OLLAMA_HOST / defaults
 uv run streamlit run src/app.py --server.port 8530
 ```
 
+Then open **<http://localhost:8530/smrz/>** — not `http://localhost:8530/`, which
+returns 404. `.streamlit/config.toml` sets `baseUrlPath = "smrz"` so the app can
+be served under a path by the reverse proxy; see [Remote access](#remote-access).
+
 ## Sign-in
 The app requires a login. Set the seed passwords in `.env` before the first run:
 
@@ -69,14 +73,34 @@ stored, and both `.env` and `data/` are gitignored — no credential ever reache
 the repo. To change a password, update `.env` and delete `data/users.json` so it
 is re-seeded; to change the accounts themselves, edit `auth.SEED_USERS`.
 
-## Remote access (Cloudflare quick tunnel)
+## Remote access
+
+The app is served publicly at **<https://ai.brenk.com/smrz/>** by an nginx
+reverse proxy, which terminates TLS and maps that path onto port 8530. The URL is
+permanent. Two things must agree, or the app renders blank:
+
+| Side | Setting |
+|---|---|
+| nginx | `location /smrz/` → `proxy_pass http://172.16.4.112:8530;` |
+| this app | `.streamlit/config.toml` → `[server] baseUrlPath = "smrz"` |
+
+The proxy config and the reasoning live in the orchestrator repo:
+`local_app-orchestrator/deploy/ai.brenk.com.conf` and `docs/reverse-proxy.md`.
+The orchestrator at <https://ai.brenk.com/> links here.
+
+### Cloudflare quick tunnel (retired)
+
 ```bash
 ./tunnel.sh
 ```
-Starts the app if it isn't running, then opens a temporary `*.trycloudflare.com`
-public URL for port 8530 — no Cloudflare account required. The tunnel stays up
-until port 8530 stops listening; run `./tunnel.sh stop` to shut down both the app
-and the tunnel. Requires
+
+Superseded by the reverse proxy and **kept only as a fallback**. It still starts
+the app and opens a temporary `*.trycloudflare.com` URL for port 8530, but note
+that URL now lands on the app's port *root*, which 404s — the app answers at
+`/smrz/`, so the tunnel URL must be visited with `/smrz/` appended. `tunnel.sh`
+does not do that for you. Nothing reads `/tmp/summarizer-app-url.txt` any more;
+the orchestrator uses the permanent URL above. `./tunnel.sh stop` shuts down app
+and tunnel. Requires
 [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/).
 
 ## Tests

@@ -159,11 +159,18 @@ uv run pytest
 ```
 Test map: [docs/testing.md](docs/testing.md).
 
-`tunnel.sh` starts the app if needed, then exposes port 8530 as a temporary
-`*.trycloudflare.com` URL (no Cloudflare account; needs `cloudflared`). It moves
-any named-tunnel config aside to force quick-tunnel mode and restores it once the
-tunnel has registered. Ported from
-[KB_BS_local-wiki-he](https://github.com/ToHeinAC/KB_BS_local-wiki-he).
+**Public access is the nginx reverse proxy**, not the tunnel: it serves this app
+at `https://ai.brenk.com/smrz/` from a permanent URL, which is why
+`.streamlit/config.toml` sets `baseUrlPath = "smrz"`. Proxy config and rationale:
+`local_app-orchestrator/deploy/ai.brenk.com.conf` and its `docs/reverse-proxy.md`.
+
+`tunnel.sh` is **retired but kept** as a fallback. It starts the app if needed,
+then exposes port 8530 as a temporary `*.trycloudflare.com` URL (no Cloudflare
+account; needs `cloudflared`). It moves any named-tunnel config aside to force
+quick-tunnel mode and restores it once the tunnel has registered. Ported from
+[KB_BS_local-wiki-he](https://github.com/ToHeinAC/KB_BS_local-wiki-he). Since
+`baseUrlPath` was introduced, the URL it prints points at the port root and 404s
+— append `/smrz/`. Nothing consumes `/tmp/summarizer-app-url.txt` any more.
 
 **Persistence.** The app and the tunnel are started with `setsid nohup`, so they
 get their own session *and* ignore `SIGHUP`; closing the terminal leaves both
@@ -184,7 +191,10 @@ the watchdog's own command line and it would kill itself.
   `http://localhost:11434`). Summarizing a PDF also needs `OCR_MODEL` pulled.
 - Port 8530 is mandated by the PRD; free it if another app holds it.
 - Sign-in protects the UI, not the data: `data/users.json` holds only password
-  hashes, but the app itself serves plain HTTP. Put it behind TLS (e.g.
-  `tunnel.sh`) before exposing it publicly.
+  hashes, and the app itself serves plain HTTP. TLS is terminated by the nginx
+  reverse proxy that fronts it at `https://ai.brenk.com/smrz/`; do not expose
+  port 8530 directly.
+- The app answers **only** under `/smrz/` (`baseUrlPath` in
+  `.streamlit/config.toml`, matching the proxy path). Its port root 404s.
 - The theme's webfonts load from Google Fonts on first paint; without network
   access the app still runs and falls back to `system-ui` / `Georgia`.
