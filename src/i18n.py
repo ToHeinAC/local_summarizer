@@ -58,6 +58,11 @@ STRINGS: dict[str, dict[str, str]] = {
     "signed_in_as": {"de": "Angemeldet als **{user}**", "en": "Signed in as **{user}**"},
     "logout": {"de": "Abmelden", "en": "Logout"},
     "advanced_options": {"de": "Erweiterte Optionen", "en": "Advanced options"},
+    "gpu_pinned": {"de": "Ollama · GPU {gpu} (gepinnt)", "en": "Ollama · GPU {gpu} (pinned)"},
+    "gpu_shared": {
+        "de": "Ollama · geteilter Dienst ({reason})",
+        "en": "Ollama · shared daemon ({reason})",
+    },
     "clear_vram": {"de": "CUDA-Speicher leeren", "en": "Clear CUDA memory"},
     "vram_cleared": {
         "de": "{n} Modell(e) aus dem VRAM entladen.",

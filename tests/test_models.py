@@ -3,8 +3,8 @@ import pytest
 from src import models
 
 
-def test_four_models_registered():
-    assert len(models.list_models()) == 4
+def test_five_models_registered():
+    assert len(models.list_models()) == 5
 
 
 def test_default_model_exists():

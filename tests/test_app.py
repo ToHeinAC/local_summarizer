@@ -24,11 +24,17 @@ GAST_PW = "gast-test-pw"
 SAMPLE_UPLOAD = ("report.pdf", b"%PDF-1.4 dummy", "application/pdf")
 
 
+FAKE_GPU_STATUS = {"host": "http://fake-ollama:11434", "pinned": False, "gpu": None,
+                    "managed": False, "reason": "test stub"}
+
+
 @pytest.fixture
 def anon(monkeypatch, tmp_path):
     """The app, run offline and signed out, with an isolated user store."""
     monkeypatch.setattr("src.models.annotate_availability", lambda host: FAKE_MODELS)
     monkeypatch.setattr("src.auth.DATA_ROOT", tmp_path)
+    monkeypatch.setattr("src.ollama_server.host", lambda: FAKE_GPU_STATUS["host"])
+    monkeypatch.setattr("src.ollama_server.status", lambda: FAKE_GPU_STATUS)
     monkeypatch.setenv("SEED_PW_HEIN", "hein-test-pw")
     monkeypatch.setenv("SEED_PW_GAST", GAST_PW)
     return AppTest.from_file(APP_FILE).run()
@@ -91,6 +97,18 @@ def test_accepted_formats():
 
 def test_config_loaded():
     assert app.CFG.app_port == 8530
+
+
+def test_advanced_options_shows_the_gpu_pin_status(at):
+    assert any("test stub" in c.value for c in at.sidebar.caption)
+
+
+def test_summarize_uses_the_resolved_ollama_host(at, monkeypatch):
+    calls = {}
+    monkeypatch.setattr("src.agent.run", lambda **kw: calls.update(kw) or "# ok")
+    at.file_uploader[0].set_value(SAMPLE_UPLOAD).run()
+    next(b for b in at.button if b.label == "Zusammenfassen").click().run()
+    assert calls["host"] == FAKE_GPU_STATUS["host"]
 
 
 def test_theme_css_available_to_ui():

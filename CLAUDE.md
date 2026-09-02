@@ -29,6 +29,7 @@ Start with [IMPLEMENTATION.md](IMPLEMENTATION.md) @IMPLEMENTATION.md — current
 - [docs/models.md](docs/models.md) @docs/models.md — Ollama model registry, availability check
 - [docs/templates.md](docs/templates.md) @docs/templates.md — summary template registry, how to add one
 - [docs/export.md](docs/export.md) @docs/export.md — md/pdf/docx rendering, PDF font fallback
+- [docs/gpu.md](docs/gpu.md) @docs/gpu.md — single-GPU placement policy, the pinned Ollama daemon
 - [docs/testing.md](docs/testing.md) @docs/testing.md — test map and fixtures
 
 [PRD.md](PRD.md) holds the original goals and acceptance criteria.

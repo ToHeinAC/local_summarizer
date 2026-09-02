@@ -18,7 +18,7 @@ import os
 
 import streamlit as st
 
-from src import agent, auth, export, ollama_client, theme
+from src import agent, auth, export, ollama_client, ollama_server, theme
 from src.config import load_config
 from src.i18n import DEFAULT_LANG, LANGUAGE_NAMES, LANGUAGES, pick, t
 from src.models import DEFAULT_MODEL_ID, annotate_availability
@@ -78,8 +78,13 @@ def _sidebar(lang: str) -> None:
     st.sidebar.markdown("---")
 
     with st.sidebar.expander(t("advanced_options", lang), expanded=False):
+        gpu_status = ollama_server.status()
+        if gpu_status["pinned"]:
+            st.caption(t("gpu_pinned", lang, gpu=gpu_status["gpu"]))
+        else:
+            st.caption(t("gpu_shared", lang, reason=gpu_status["reason"]))
         if st.button(t("clear_vram", lang), key="clear_vram_btn"):
-            unloaded = ollama_client.unload_all(CFG.ollama_host)
+            unloaded = ollama_client.unload_all(ollama_server.host())
             if unloaded:
                 st.success(t("vram_cleared", lang, n=len(unloaded)))
             else:
@@ -100,7 +105,7 @@ def _sidebar(lang: str) -> None:
 def _model_selector(container, lang: str) -> dict:
     """Render the model picker (with its speed/quality stars) into a container."""
     container.caption(t("model_caption", lang))
-    models = annotate_availability(CFG.ollama_host)
+    models = annotate_availability(ollama_server.host())
     ids = [m["id"] for m in models]
     model_id = container.selectbox(
         t("model_label", lang),
@@ -162,7 +167,7 @@ def _run(uploaded, opts: dict, model: dict, lang: str) -> None:
             template_id=opts["template_id"],
             model_id=model["id"],
             target_language=opts["language"],
-            host=CFG.ollama_host,
+            host=ollama_server.host(),
             ocr_model=CFG.ocr_model,
             rewrite_model=CFG.rewrite_model,
             pdf_dpi=CFG.pdf_dpi,

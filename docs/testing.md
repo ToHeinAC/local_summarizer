@@ -1,8 +1,9 @@
 # Testing
 
 Run: `uv run pytest`. Tests are fully offline — the summarizer LLM, the
-conversion/OCR calls and the model-availability query are all monkeypatched, so
-no Ollama server or network is required. 117 tests total (well under the 200 cap).
+conversion/OCR calls, the model-availability query and GPU/daemon discovery
+(`nvidia-smi`, `ollama serve`) are all monkeypatched, so no Ollama server, GPU
+or network is required. 158 tests total (well under the 200 cap).
 
 | File | Covers |
 |---|---|
@@ -16,14 +17,18 @@ no Ollama server or network is required. 117 tests total (well under the 200 cap
 | `test_templates.py` | registry shape, default, unknown id, `detailed_refs` cites source anchors while `detailed` suppresses them |
 | `test_agent.py` | chunk split, single-pass vs map-reduce, progress monotonicity, Markdown-first ingest, `fast=True` skips the per-page rewrite, `return_markdown` tuple, language resolution, empty input |
 | `test_export.py` | md/docx/pdf output validity, unicode, exporters registry |
+| `test_gpu_placement.py` | nvidia-smi parsing, single-GPU pin/split policy, `cuda_env` |
+| `test_ollama_server.py` | pinned-daemon resolution (fail-open paths, adoption, caching), model-store discovery, VRAM size estimate |
 | `test_auth.py` | env-seeded store, hashed (never plaintext) storage, wrong password, unknown user, missing seed, corrupt/missing store |
 | `test_app.py` | UI helpers, accepted formats, config wiring, theme availability, the GUI-language toggle, and the single-window upload→summary flow via `AppTest` |
 | `test_i18n.py` | catalogue key/placeholder parity across languages, `t` formatting + fallback, `pick` |
 
 ## UI tests
 `test_app.py` runs the real Streamlit script via `streamlit.testing.v1.AppTest`.
-The `anon` fixture stubs `models.annotate_availability` and points
-`auth.DATA_ROOT` at `tmp_path`; `at` builds on it by presetting
+The `anon` fixture stubs `models.annotate_availability`, `ollama_server.host`/
+`ollama_server.status` (so a test run never tries to reach a real Ollama daemon
+or spawn a pinned one) and points `auth.DATA_ROOT` at `tmp_path`; `at` builds on
+it by presetting
 `session_state["user"]`, i.e. signed in. Signed out, the app must render only the
 login form (no tabs); valid credentials sign in, invalid ones error, and
 **Abmelden** clears the session. Widget labels are asserted in German (the

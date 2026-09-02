@@ -55,6 +55,17 @@ MODELS: list[dict] = [
         "quality": 3,
         "note": {"de": "Höchste Genauigkeit; am langsamsten.", "en": "Highest fidelity; slowest."},
     },
+    {
+        "id": "qwen38",
+        "tag": "qwen3.8-27b:latest",
+        "label": {"de": "Qwen3.8 (27B)", "en": "Qwen3.8 (27B)"},
+        "speed": 1,
+        "quality": 3,
+        "note": {
+            "de": "Größtes Modell (27B); GPU-gepinnt am schnellsten.",
+            "en": "Largest model (27B); fastest when GPU-pinned.",
+        },
+    },
 ]
 
 DEFAULT_MODEL_ID = "standard"

@@ -26,7 +26,8 @@ the same way `models.py` already queries `GET /api/tags` over `urllib`.
    bytes → Markdown, including vision OCR for scanned PDF pages.
    See [ingestion.md](ingestion.md).
 4. **Services (plain Python)** — `i18n.py`, `language.py`, `templates.py`,
-   `models.py`, `export.py`, `config.py`, `prompts.py`.
+   `models.py`, `export.py`, `config.py`, `prompts.py`, `gpu_placement.py`,
+   `ollama_server.py`.
 
 ## Data flow
 ```
@@ -45,6 +46,12 @@ The UI passes the raw file to `agent.run()`; the ingest node converts it (with
 `fast=True`, so digital pages are used verbatim). The `text=` path — a
 pre-converted string with no file conversion — remains supported for direct API
 use and is covered by tests.
+
+`app.py` resolves the Ollama host via `ollama_server.host()`, not
+`Config.ollama_host` directly, and passes the result into every `host=`
+parameter above (`agent.run`, `annotate_availability`, `ollama_client.unload_all`).
+That resolves to a second Ollama daemon pinned to a single GPU when one is
+free, falling back to the shared system daemon otherwise. See [gpu.md](gpu.md).
 
 ## Progress reporting
 One callback for the whole run. `agent.run()` receives

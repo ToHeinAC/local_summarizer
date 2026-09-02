@@ -5,7 +5,7 @@ detail lives in [docs/](docs/). See [PRD.md](PRD.md) for goals and
 [AGENTS.md](AGENTS.md) for collaboration rules.
 
 ## Status
-All planned features implemented and tested (117 tests passing). End-to-end
+All planned features implemented and tested (158 tests passing). End-to-end
 verified against a live Ollama server, including OCR of a scanned PDF. The app
 does one thing: summarize a document.
 
@@ -16,10 +16,12 @@ Layered. LangChain/LangGraph are confined to the **agent layer**
 
 ```
 app.py ─ Streamlit UI: login gate, progress, downloads, logout  (no LangChain)
-  ├─ auth.py        bcrypt user store (data/users.json)
-  ├─ i18n.py        German (default) / English UI strings
-  ├─ theme.py       Forest palette + injected CSS
-  └─ agent.run(filename=…, fast=True) ─ LangGraph: ingest→chunk→map→reduce→finalize
+  ├─ auth.py          bcrypt user store (data/users.json)
+  ├─ i18n.py          German (default) / English UI strings
+  ├─ theme.py         Forest palette + injected CSS
+  ├─ ollama_server.host() ─ resolves the GPU-pinned Ollama daemon, or the shared one
+  │    └─ gpu_placement.py  single-GPU placement policy (nvidia-smi, CUDA env)
+  └─ agent.run(filename=…, fast=True, host=…) ─ LangGraph: ingest→chunk→map→reduce→finalize
      ├─ extract.py       file bytes → plain text   (called inside ingest)
      │    └─ md_convert.py  PDF per-page verbatim/OCR, DOCX→MD
      │         └─ ollama_client.py  vision OCR (rewrite unused in fast mode)
@@ -69,6 +71,8 @@ of the agent and ingestion layers. Details: [docs/architecture.md](docs/architec
 | `src/export.py` | Markdown → md/pdf/docx bytes | [export](docs/export.md) |
 | `src/prompts.py` | Named prompt constants | [agent](docs/agent.md) |
 | `src/config.py` | dotenv-backed config | — |
+| `src/gpu_placement.py` | Single-GPU placement policy (nvidia-smi, CUDA env) | [gpu](docs/gpu.md) |
+| `src/ollama_server.py` | GPU-pinned Ollama daemon, `host()`/`status()` | [gpu](docs/gpu.md) |
 
 ## Key decisions
 - **Summarization only**: the app has one job and one window — no sections, no
@@ -142,8 +146,19 @@ of the agent and ingestion layers. Details: [docs/architecture.md](docs/architec
   from the same repo. Colors are duplicated in `.streamlit/config.toml` and
   `theme.FOREST` and must stay in sync. See [docs/ui.md](docs/ui.md).
 - **Models**: `LiquidAI/lfm2.5-1.2b-instruct:latest` (fast), `gemma4:e4b` (standard, default),
-  `qwen3:14b` (smarter), `gpt-oss:20b` (accurate). Tags match `ollama list`.
+  `qwen3:14b` (smarter), `gpt-oss:20b` (accurate), `qwen3.8-27b` (largest, 27B —
+  a local `ollama create` of a GGUF, not a registry pull). Tags match `ollama list`.
   Uninstalled models are flagged in the UI. See [docs/models.md](docs/models.md).
+- **GPU pinning**: every LLM call this app makes — summarization, OCR, the
+  per-page Markdown rewrite, and VRAM eviction — goes through
+  `ollama_server.host()`, which resolves once per process to a second Ollama
+  daemon pinned to a single (currently free) GPU, or falls back unchanged to
+  the shared system daemon if pinning is off, remote, or impossible. Splitting
+  a model's layers across both GPUs costs a cross-device hop per token and no
+  extra speed (94 → 170 tok/s pinned vs split, measured on this box's two RTX
+  4090s). Ported from
+  [KB_BS_local-wiki-he](https://github.com/ToHeinAC/KB_BS_local-wiki-he)
+  (Apache-2.0). See [docs/gpu.md](docs/gpu.md).
 - **PDF export**: `fpdf2` (pure Python). Uses a system DejaVu Unicode font when
   present, else Helvetica with latin-1 fallback. See [docs/export.md](docs/export.md).
 - **Formats in**: PDF, DOCX, TXT, MD. **Formats out**: MD/PDF/DOCX (the summary).
