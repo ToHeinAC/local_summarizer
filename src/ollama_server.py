@@ -60,7 +60,7 @@ _STARTUP_TIMEOUT_S = 40.0
 # rather than from config.py so this module stays free of an import cycle.
 _MODEL_ENV = {
     "OCR_MODEL": "deepseek-ocr:3b",
-    "REWRITE_MODEL": "LiquidAI/lfm2.5-1.2b-instruct:latest",
+    "REWRITE_MODEL": "gemma3:4b",
 }
 
 _lock = threading.Lock()

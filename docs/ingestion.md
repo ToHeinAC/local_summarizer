@@ -85,13 +85,20 @@ rewrite means a digital PDF costs one LLM call per page *before* summarization
 begins. The calls run concurrently (see above), so wall-clock cost is roughly the
 per-page cost times `ceil(pages / effective_slots)`.
 
-`REWRITE_MODEL` defaults to a small, fast model
-(`LiquidAI/lfm2.5-1.2b-instruct:latest`) precisely because the rewrite only adds
-Markdown structure and never rewords — a large model buys no fidelity here.
-Measured ~0.7s/page vs ~5.7s/page for `gemma4:e4b`; end-to-end the 80-page
-`Sanierungskonzept` sample converts in ~54s (of which ~40s is loading the vision
-model for its one scanned page), and a 4-page digital PDF in ~4s. Word recall vs
-the source is 99% with zero hallucinated words, matching the large model.
+`REWRITE_MODEL` defaults to a small model (`gemma3:4b`) precisely because the
+rewrite only adds Markdown structure and never rewords — a large model buys no
+fidelity here.
+
+`REWRITE_MODEL` was `LiquidAI/lfm2.5-1.2b-instruct:latest` until it started
+failing rewrite calls with `llama-server chat error: ... "The model produced
+output that does not match the expected peg-native format"` — a 500 from
+Ollama's structured-output grammar check, tied to LFM2's "native" tool-calling
+PEG grammar misfiring even without tools being passed. `gemma3:4b` has no such
+mode. It is a plain instruct model (no reasoning/thinking output to strip
+either), already installed on this box. Its per-page cost has not been
+re-benchmarked; expect it to be somewhat slower than the 1.2B model it
+replaced (~0.7s/page) but still well under a summarization-sized model
+(~5.7s/page for `gemma4:e4b`).
 
 ## Language detection (`src/language.py`)
 `detect_language(text, fallback="en") -> str` returns an ISO-639-1 code via

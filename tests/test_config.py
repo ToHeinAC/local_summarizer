@@ -12,7 +12,7 @@ def test_defaults(monkeypatch):
     assert cfg.default_model == "standard"
     assert cfg.default_language == "auto"
     assert cfg.ocr_model == "deepseek-ocr:3b"
-    assert cfg.rewrite_model == "LiquidAI/lfm2.5-1.2b-instruct:latest"
+    assert cfg.rewrite_model == "gemma3:4b"
     assert cfg.pdf_dpi == 150
 
 
