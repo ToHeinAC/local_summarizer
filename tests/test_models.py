@@ -3,8 +3,8 @@ import pytest
 from src import models
 
 
-def test_five_models_registered():
-    assert len(models.list_models()) == 5
+def test_six_models_registered():
+    assert len(models.list_models()) == 6
 
 
 def test_default_model_exists():
@@ -31,3 +31,12 @@ def test_annotate_availability(monkeypatch):
     by_id = {m["id"]: m for m in annotated}
     assert by_id["standard"]["installed"] is True
     assert by_id["smarter"]["installed"] is False
+
+
+def test_hybrid_needs_both_tags(monkeypatch):
+    monkeypatch.setattr(models, "installed_tags", lambda host: {"gemma4:e4b"})
+    hybrid = {m["id"]: m for m in models.annotate_availability("http://x")}["hybrid"]
+    assert hybrid["installed"] is False
+    assert hybrid["missing"] == ["qwen3.8-27b:latest"]
+    monkeypatch.setattr(models, "installed_tags", lambda host: {"gemma4:e4b", "qwen3.8-27b:latest"})
+    assert {m["id"]: m for m in models.annotate_availability("http://x")}["hybrid"]["installed"]

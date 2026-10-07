@@ -15,6 +15,7 @@ from src.extract import to_markdown
 from src.i18n import DEFAULT_LANG, t
 from src.language import detect_language
 from src.models import get_model
+from src.ollama_client import unload
 from src.prompts import FINALIZE_PROMPT, LANGUAGE_LABELS, MAP_PROMPT, REDUCE_PROMPT
 from src.templates import get_template
 from src.tools import make_llm, run_prompt
@@ -36,6 +37,7 @@ class SummaryState(TypedDict, total=False):
     target_language: str
     template_id: str
     model_tag: str
+    map_model_tag: str  # cheaper model for map/reduce; hybrid models only
     host: Optional[str]
     ocr_model: str
     rewrite_model: str
@@ -67,6 +69,11 @@ def _progress(config, fraction: float, label: str) -> None:
 
 def _llm(state: SummaryState):
     return make_llm(state["model_tag"], state.get("host"))
+
+
+def _map_llm(state: SummaryState):
+    """LLM for the per-chunk passes: the hybrid's small model, else the main one."""
+    return make_llm(state.get("map_model_tag") or state["model_tag"], state.get("host"))
 
 
 def _lang(state: SummaryState) -> str:
@@ -112,7 +119,7 @@ def _map(state: SummaryState, config) -> dict:
     chunks = state["chunks"]
     if len(chunks) == 1:
         return {"chunk_summaries": chunks}
-    llm = _llm(state)
+    llm = _map_llm(state)
     lang = _lang(state)
     summaries: list[str] = []
     for i, chunk in enumerate(chunks, start=1):
@@ -124,7 +131,7 @@ def _map(state: SummaryState, config) -> dict:
 
 def _reduce(state: SummaryState, config) -> dict:
     summaries = state["chunk_summaries"]
-    llm = _llm(state)
+    llm = _map_llm(state)
     _progress(config, 0.85, t("reducing", _lang(state)))
     while len(summaries) > 1:
         batched: list[str] = []
@@ -143,6 +150,9 @@ def _finalize(state: SummaryState, config) -> dict:
     template = get_template(state["template_id"])["structure"]
     content = state["chunk_summaries"][0]
     _progress(config, 0.90, t("finalizing", _lang(state)))
+    map_tag = state.get("map_model_tag")
+    if map_tag and len(state["chunks"]) > 1:
+        unload(map_tag, state.get("host"))  # free VRAM for the large final model
     summary = run_prompt(
         _llm(state),
         FINALIZE_PROMPT.format(language=language, template=template, content=content),
@@ -203,6 +213,7 @@ def run(
     document was converted to before summarizing (the LLM-rewritten Markdown when
     ``fast=False``).
     """
+    model = get_model(model_id)
     state: SummaryState = {
         "ui_lang": ui_lang,
         "filename": filename,
@@ -210,7 +221,8 @@ def run(
         "text": text,
         "target_language": target_language,
         "template_id": template_id,
-        "model_tag": get_model(model_id)["tag"],
+        "model_tag": model["tag"],
+        "map_model_tag": model.get("map_tag", ""),
         "host": host,
         "ocr_model": ocr_model,
         "rewrite_model": rewrite_model,

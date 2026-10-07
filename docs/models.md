@@ -10,6 +10,7 @@ installed on the local server.
 | `smarter` | `qwen3:14b` | Klüger / Smarter | 1 | 3 |
 | `accurate` | `gpt-oss:20b` | Genau / Accurate | 1 | 3 |
 | `qwen38` | `qwen3.8-27b:latest` | Qwen3.8 (27B) | 1 | 3 |
+| `hybrid` | `qwen3.8-27b:latest` + `map_tag` `gemma4:e4b` | Hybrid | 2 | 3 |
 
 `qwen38`'s tag is not an official Ollama registry model: it is a local
 `ollama create` of the GGUF from the sibling
@@ -37,11 +38,18 @@ pinned to one it reaches ~44 tok/s.
 PRD and the user's `ollama list`. `label` and `note` are `{"de": ..., "en": ...}`
 dicts read with `i18n.pick`, so the sidebar follows the GUI language.
 
+`hybrid` exists because running the 27B over every chunk is very slow. Its
+`map_tag` (`gemma4:e4b`) handles the map and reduce passes; `tag` (Qwen3.8) runs
+only the finalize node, so it sees one short prompt. `agent._finalize` evicts the
+map model first (`ollama_client.unload`) so the 27B gets the GPU. Single-chunk
+documents use Qwen3.8 only. Live check: 34k chars / 6 chunks in ~74 s.
+
 ## API
 - `list_models()` / `get_model(id)` (raises `KeyError` if unknown)
 - `installed_tags(host) -> set[str]` — queries `GET {host}/api/tags` via stdlib
   `urllib`; returns an empty set if the server is unreachable (no crash).
+- `model_tags(model)` — all tags a model needs (`tag` + optional `map_tag`).
 - `annotate_availability(host) -> list[dict]` — each model plus an `installed`
-  bool. The UI warns and disables **Zusammenfassen** / **Summarize** for
+  bool (all needed tags present) and a `missing` tag list. The UI warns and disables **Zusammenfassen** / **Summarize** for
   uninstalled models,
   suggesting `ollama pull <tag>`.

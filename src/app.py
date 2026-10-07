@@ -119,7 +119,7 @@ def _model_selector(container, lang: str) -> dict:
         t("speed_quality", lang, speed=_stars(model["speed"]), quality=_stars(model["quality"]))
     )
     if not model["installed"]:
-        container.warning(t("not_installed", lang, tag=model["tag"]))
+        container.warning(t("not_installed", lang, tag=", ".join(model.get("missing", [model["tag"]]))))
     return model
 
 

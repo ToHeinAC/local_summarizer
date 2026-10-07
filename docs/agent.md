@@ -16,7 +16,7 @@ finalize) fits well under 8192, so the cap costs no precision.
    See [ingestion.md](ingestion.md).
 2. **chunk** — `split_text()` splits into overlapping character chunks
    (`CHUNK_SIZE=6000`, `CHUNK_OVERLAP=200`). Progress 0.42.
-3. **map** — summarizes each chunk with `MAP_PROMPT`. Single-chunk documents
+3. **map** — uses `map_model_tag` when the model is hybrid (see [models.md](models.md)), else the main model; summarizes each chunk with `MAP_PROMPT`. Single-chunk documents
    skip the LLM here and pass the chunk straight through. Progress 0.42→0.80.
 4. **reduce** — only when >1 partial summary. Combines with `REDUCE_PROMPT`
    hierarchically in batches of `REDUCE_BATCH=8` until one summary remains,

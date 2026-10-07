@@ -13,6 +13,7 @@ def recorder(monkeypatch):
         return f"OUT{len(prompts)}"
 
     monkeypatch.setattr(agent, "make_llm", lambda *a, **k: object())
+    monkeypatch.setattr(agent, "unload", lambda *a, **k: None)
     monkeypatch.setattr(agent, "run_prompt", fake_run_prompt)
     return prompts
 
@@ -114,3 +115,35 @@ def test_auto_language_detected_for_finalize(recorder):
         model_id="fast",
     )
     assert "English" in recorder[-1]
+
+
+def test_hybrid_uses_small_model_for_chunks_and_big_for_final(monkeypatch):
+    built: list[str] = []
+    llms: dict[str, object] = {}
+
+    def fake_make_llm(tag, host=None):
+        built.append(tag)
+        return llms.setdefault(tag, type("L", (), {"tag": tag})())
+
+    used: list[tuple[str, str]] = []
+    unloaded: list[str] = []
+    monkeypatch.setattr(agent, "make_llm", fake_make_llm)
+    monkeypatch.setattr(agent, "run_prompt", lambda llm, p: (used.append((llm.tag, p)), "X")[1])
+    monkeypatch.setattr(agent, "unload", lambda tag, host=None: unloaded.append(tag))
+
+    agent.run(text="A" * 15000, template_id="standard", model_id="hybrid")
+    tags = [tag for tag, _ in used]
+    # 3 map + 1 reduce on the small model, then one finalize on the big one.
+    assert tags == ["gemma4:e4b"] * 4 + ["qwen3.8-27b:latest"]
+    assert unloaded == ["gemma4:e4b"]
+
+
+def test_hybrid_single_chunk_goes_straight_to_big_model(monkeypatch):
+    used: list[str] = []
+    unloaded: list[str] = []
+    monkeypatch.setattr(agent, "make_llm", lambda tag, host=None: tag)
+    monkeypatch.setattr(agent, "run_prompt", lambda llm, p: (used.append(llm), "X")[1])
+    monkeypatch.setattr(agent, "unload", lambda tag, host=None: unloaded.append(tag))
+    agent.run(text="Short.", template_id="standard", model_id="hybrid")
+    assert used == ["qwen3.8-27b:latest"]
+    assert unloaded == []

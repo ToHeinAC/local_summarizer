@@ -66,6 +66,21 @@ MODELS: list[dict] = [
             "en": "Largest model (27B); fastest when GPU-pinned.",
         },
     },
+    {
+        "id": "hybrid",
+        "tag": "qwen3.8-27b:latest",  # final summary (finalize node)
+        "map_tag": "gemma4:e4b",  # per-chunk map + reduce passes
+        "label": {
+            "de": "Hybrid (gemma4:e4b + Qwen3.8 27B)",
+            "en": "Hybrid (gemma4:e4b + Qwen3.8 27B)",
+        },
+        "speed": 2,
+        "quality": 3,
+        "note": {
+            "de": "gemma4:e4b fasst die Abschnitte zusammen, Qwen3.8 schreibt nur die Endfassung.",
+            "en": "gemma4:e4b summarizes the sections; Qwen3.8 writes only the final summary.",
+        },
+    },
 ]
 
 DEFAULT_MODEL_ID = "standard"
@@ -82,6 +97,11 @@ def get_model(model_id: str) -> dict:
         if model["id"] == model_id:
             return model
     raise KeyError(f"Unknown model id: {model_id}")
+
+
+def model_tags(model: dict) -> list[str]:
+    """Every Ollama tag ``model`` needs (the hybrid also needs its ``map_tag``)."""
+    return [model["tag"], *([model["map_tag"]] if "map_tag" in model else [])]
 
 
 def installed_tags(host: str, timeout: float = 2.0) -> set[str]:
@@ -101,4 +121,8 @@ def installed_tags(host: str, timeout: float = 2.0) -> set[str]:
 def annotate_availability(host: str) -> list[dict]:
     """Return models with an ``installed`` bool based on the Ollama server."""
     tags = installed_tags(host)
-    return [{**model, "installed": model["tag"] in tags} for model in MODELS]
+    annotated = []
+    for model in MODELS:
+        missing = [t for t in model_tags(model) if t not in tags]
+        annotated.append({**model, "installed": not missing, "missing": missing})
+    return annotated
