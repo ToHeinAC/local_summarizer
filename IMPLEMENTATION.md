@@ -5,7 +5,7 @@ detail lives in [docs/](docs/). See [PRD.md](PRD.md) for goals and
 [AGENTS.md](AGENTS.md) for collaboration rules.
 
 ## Status
-All planned features implemented and tested (158 tests passing). End-to-end
+All planned features implemented and tested (180 tests passing). End-to-end
 verified against a live Ollama server, including OCR of a scanned PDF. The app
 does one thing: summarize a document.
 
@@ -58,6 +58,10 @@ of the agent and ingestion layers. Details: [docs/architecture.md](docs/architec
 |---|---|---|
 | `src/app.py` | Streamlit UI: login gate, single upload→summary window, sidebar, logout | [ui](docs/ui.md) |
 | `src/auth.py` | bcrypt user store + `verify()` | [ui](docs/ui.md) |
+| `src/usage.py` | Usage log `data/usage.jsonl` (logins, jobs, downloads) | [ui](docs/ui.md) |
+| `src/usage_stats.py` | Pure aggregation of the usage log | [ui](docs/ui.md) |
+| `src/usage_chart.py` | Plotly daily bar chart (total or per user) | [ui](docs/ui.md) |
+| `src/ui_stats.py` | "Nutzungsstatistik" panel, only for T. Hein | [ui](docs/ui.md) |
 | `src/i18n.py` | German/English UI strings, `t()` / `pick()` | [ui](docs/ui.md) |
 | `src/theme.py` | Forest palette + injectable CSS | [ui](docs/ui.md) |
 | `src/agent.py` | LangGraph map-reduce summarizer + `run()` entry point | [agent](docs/agent.md) |

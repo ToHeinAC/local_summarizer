@@ -3,7 +3,7 @@
 Run: `uv run pytest`. Tests are fully offline — the summarizer LLM, the
 conversion/OCR calls, the model-availability query and GPU/daemon discovery
 (`nvidia-smi`, `ollama serve`) are all monkeypatched, so no Ollama server, GPU
-or network is required. 158 tests total (well under the 200 cap).
+or network is required. 180 tests total (well under the 200 cap).
 
 | File | Covers |
 |---|---|
@@ -20,7 +20,8 @@ or network is required. 158 tests total (well under the 200 cap).
 | `test_gpu_placement.py` | nvidia-smi parsing, single-GPU pin/split policy, `cuda_env` |
 | `test_ollama_server.py` | pinned-daemon resolution (fail-open paths, adoption, caching), model-store discovery, VRAM size estimate |
 | `test_auth.py` | env-seeded store, hashed (never plaintext) storage, wrong password, unknown user, missing seed, corrupt/missing store |
-| `test_app.py` | UI helpers, accepted formats, config wiring, theme availability, the GUI-language toggle, and the single-window upload→summary flow via `AppTest` |
+| `test_usage.py`, `test_usage_stats.py`, `test_usage_chart.py` | usage log append/read, aggregation per day/user, fixed user colors, plotly figure |
+| `test_app.py` | UI helpers, accepted formats, config wiring, theme availability, the GUI-language toggle, usage logging and the T. Hein-only statistics panel, and the single-window upload→summary flow via `AppTest` |
 | `test_i18n.py` | catalogue key/placeholder parity across languages, `t` formatting + fallback, `pick` |
 
 ## UI tests

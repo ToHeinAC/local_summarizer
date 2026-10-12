@@ -1,7 +1,9 @@
+import json
+
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from src import app, i18n
+from src import app, i18n, usage
 
 APP_FILE = "src/app.py"
 
@@ -260,3 +262,84 @@ def test_every_summary_language_has_a_name_in_both_guis():
     assert set(i18n.LANGUAGE_NAMES) == set(app.LANGUAGE_LABELS)
     for names in i18n.LANGUAGE_NAMES.values():
         assert set(names) == set(i18n.LANGUAGES)
+
+
+# --- usage log and statistics -----------------------------------------------
+
+
+def _events(tmp_path):
+    return usage.read_events(tmp_path)
+
+
+def test_login_attempts_and_logout_are_logged(anon, tmp_path):
+    _sign_in(anon, "Gast", "wrong")
+    at = _sign_in(anon, "Gast", GAST_PW)
+    next(b for b in at.button if b.label == "Abmelden").click().run()
+    events = _events(tmp_path)
+    assert [(e["event"], e["user"]) for e in events] == [
+        ("login_failed", "Gast"),
+        ("login_ok", "Gast"),
+        ("logout", "Gast"),
+    ]
+    assert events[1]["session"]
+    assert events[1]["session"] == events[2]["session"]
+    assert GAST_PW not in json.dumps(events)
+    assert "wrong" not in json.dumps(events)
+
+
+def test_jobs_and_downloads_are_logged_without_the_file_name(at, monkeypatch, tmp_path):
+    monkeypatch.setattr("src.agent.run", lambda **kw: "## Overview\nDone.")
+    at.file_uploader[0].set_value(SAMPLE_UPLOAD).run()
+    next(b for b in at.button if b.label == "Zusammenfassen").click().run()
+    next(d for d in at.download_button if d.label == ".docx herunterladen").click().run()
+    start, end, download = _events(tmp_path)
+    assert (start["event"], start["user"]) == ("job_start", "T. Hein")
+    assert start["model"] == "gemma4:e4b"
+    assert (start["file_type"], start["precise"]) == ("pdf", False)
+    assert start["size_kb"] >= 0
+    assert {"language", "template"} <= set(start)
+    assert (end["event"], end["status"]) == ("job_end", "ok")
+    assert end["duration_s"] >= 0
+    assert (download["event"], download["format"]) == ("download", "docx")
+    assert "report" not in json.dumps(_events(tmp_path))
+
+
+def test_failed_jobs_are_logged(at, monkeypatch, tmp_path):
+    def broken(**kw):
+        raise RuntimeError("kaputt")
+
+    monkeypatch.setattr("src.agent.run", broken)
+    at.file_uploader[0].set_value(SAMPLE_UPLOAD).run()
+    next(b for b in at.button if b.label == "Zusammenfassen").click().run()
+    assert [e["status"] for e in _events(tmp_path) if e["event"] == "job_end"] == ["error"]
+
+
+def _seed_log(tmp_path):
+    for user, event, fields in [
+        ("T. Hein", "login_ok", {}),
+        ("Gast", "job_start", {}),
+        ("Gast", "job_end", {"status": "ok", "duration_s": 90.0}),
+        ("x", "login_failed", {}),
+    ]:
+        usage.log_event(tmp_path, event, user, **fields)
+
+
+def test_usage_statistics_are_for_t_hein_only(anon, tmp_path):
+    _seed_log(tmp_path)
+    anon.session_state["user"] = "Gast"
+    assert "Nutzungsstatistik" not in [e.label for e in anon.run().expander]
+    anon.session_state["user"] = "T. Hein"
+    at = anon.run()
+    assert "Nutzungsstatistik" in [e.label for e in at.expander]
+    assert at.get("plotly_chart")
+    assert {m.label for m in at.metric} >= {"Aktive Benutzer", "Aufträge"}
+    assert any("Gast" in str(df.value) for df in at.dataframe)
+    at.select_slider(key="stats_period").set_value("period_week").run()
+    at.selectbox(key="stats_metric").set_value("minutes").run()
+    at.toggle(key="stats_by_user").set_value(False).run()
+    assert not at.exception
+    assert at.get("plotly_chart")
+
+
+def test_usage_statistics_without_a_log_say_so(at):
+    assert any("Noch keine Nutzungsdaten" in i.value for i in at.info)

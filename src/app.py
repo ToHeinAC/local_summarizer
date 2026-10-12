@@ -15,22 +15,35 @@ Run: uv run streamlit run src/app.py --server.port 8530
 from __future__ import annotations
 
 import os
+import secrets
+import time
 
 import streamlit as st
 
-from src import agent, auth, export, ollama_client, ollama_server, theme
+from src import agent, auth, export, ollama_client, ollama_server, theme, usage
 from src.config import load_config
 from src.i18n import DEFAULT_LANG, LANGUAGE_NAMES, LANGUAGES, pick, t
 from src.models import DEFAULT_MODEL_ID, annotate_availability
 from src.prompts import LANGUAGE_LABELS
 from src.templates import DEFAULT_TEMPLATE_ID, list_templates
+from src.ui_stats import stats_panel
 
 CFG = load_config()
 ACCEPTED = ["pdf", "docx", "txt", "md"]
+# Users who see the usage statistics panel.
+STATS_USERS = ("T. Hein",)
 
 
 def _stars(n: int) -> str:
     return "★" * n + "☆" * (3 - n)
+
+
+def _log(event: str, **fields) -> None:
+    """Append one event to ``data/usage.jsonl`` for the signed-in user (see usage.py)."""
+    state = st.session_state
+    usage.log_event(
+        auth.DATA_ROOT, event, state.get("user", ""), session=state.get("session", ""), **fields
+    )
 
 
 def _ui_lang() -> str:
@@ -66,8 +79,11 @@ def _login_gate() -> None:
         if submitted:
             if auth.verify(username, password):
                 st.session_state["user"] = username
+                st.session_state["session"] = secrets.token_hex(4)
+                _log("login_ok")
                 st.rerun()
             else:
+                usage.log_event(auth.DATA_ROOT, "login_failed", username)
                 st.error(t("bad_credentials", lang))
         _language_toggle(mid)
     st.stop()
@@ -95,6 +111,7 @@ def _sidebar(lang: str) -> None:
     # Logout only clears session state (no process kill), so the app process —
     # and any Cloudflare tunnel in front of it — stays alive for the next user.
     if st.sidebar.button(t("logout", lang), key="logout_btn"):
+        _log("logout")
         lang = st.session_state.get("ui_lang", DEFAULT_LANG)
         st.session_state.clear()  # drop the signed-in user and their documents
         st.session_state["ui_lang"] = lang  # but keep the chosen GUI language
@@ -152,6 +169,19 @@ def _summary_options(lang: str) -> dict:
     return {"language": language, "template_id": template_id}
 
 
+def _log_job_start(name: str, data: bytes, opts: dict, model: dict) -> None:
+    """Log what was summarized; the file name itself is never logged."""
+    _log(
+        "job_start",
+        model=model["tag"],
+        language=opts["language"],
+        template=opts["template_id"],
+        precise=opts["llm_format"],
+        file_type=os.path.splitext(name)[1].lstrip(".").lower(),
+        size_kb=round(len(data) / 1024, 1),
+    )
+
+
 def _run(uploaded, opts: dict, model: dict, lang: str) -> None:
     """Convert the upload and summarize it in one pass."""
     bar = st.progress(0.0, text=t("preparing", lang))
@@ -160,10 +190,13 @@ def _run(uploaded, opts: dict, model: dict, lang: str) -> None:
         bar.progress(min(fraction, 1.0), text=label)
 
     precise = opts["llm_format"]
+    data = uploaded.getvalue()
+    _log_job_start(uploaded.name, data, opts, model)
+    started = time.monotonic()
     try:
         result = agent.run(
             filename=uploaded.name,
-            data=uploaded.getvalue(),
+            data=data,
             template_id=opts["template_id"],
             model_id=model["id"],
             target_language=opts["language"],
@@ -182,14 +215,20 @@ def _run(uploaded, opts: dict, model: dict, lang: str) -> None:
         )
     except Exception as exc:  # surface any conversion/LLM failure to the user
         bar.empty()
+        _log("job_end", status="error", duration_s=round(time.monotonic() - started, 1))
         st.error(t("summarize_failed", lang, error=exc))
         return
 
     bar.empty()
+    _log("job_end", status="ok", duration_s=round(time.monotonic() - started, 1))
     summary, converted_md = result if precise else (result, None)
     st.session_state["summary"] = summary
     st.session_state["converted_md"] = converted_md
     st.session_state["stem"] = os.path.splitext(uploaded.name)[0]
+
+
+def _log_download(fmt: str) -> None:
+    _log("download", format=fmt)
 
 
 def _downloads(summary: str, stem: str, lang: str) -> None:
@@ -202,6 +241,8 @@ def _downloads(summary: str, stem: str, lang: str) -> None:
             data=exporter(summary),
             file_name=f"{stem}_{suffix}.{fmt}",
             mime=mime,
+            on_click=_log_download,
+            args=(fmt,),
             use_container_width=True,
         )
 
@@ -248,6 +289,8 @@ def _main_panel(lang: str) -> None:
                 file_name=f"{stem}.md",
                 mime="text/markdown",
                 key="download_converted_btn",
+                on_click=_log_download,
+                args=("converted_md",),
             )
         st.subheader(t("summary_heading", lang))
         with st.container(border=True):
@@ -273,6 +316,8 @@ def main() -> None:
     _sidebar(lang)
 
     st.title(t("app_title", lang))
+    if st.session_state["user"] in STATS_USERS:
+        stats_panel(auth.DATA_ROOT, lang)
     _main_panel(lang)
 
 

@@ -106,6 +106,26 @@ live as bcrypt hashes in `data/users.json`, seeded once from the `SEED_PW_*`
 variables in `.env` (see [../src/auth.py](../src/auth.py)). A missing seed raises,
 and `main()` renders that as an `st.error` instead of a traceback.
 
+## Usage log and statistics
+`usage.log_event` appends one JSON line per event to `data/usage.jsonl` (gitignored,
+never in the repo). Every line has `ts` (local ISO time with offset), `event`, `user`
+and, after login, `session` (random 8-hex id per login). Events and extra fields:
+`login_ok`; `login_failed` (`user` is the name typed); `logout`; `job_start`
+(`model` tag, `language`, `template`, `precise`, `file_type`, `size_kb`); `job_end`
+(`status` ok/error, `duration_s`); `download` (`format` md/docx/pdf/converted_md).
+No passwords, file names or text. A write error is ignored so logging never blocks
+the app. Read it with `usage.read_events` or `pandas.read_json(path, lines=True)`;
+broken lines are skipped.
+
+Users in `app.STATS_USERS` (only "T. Hein") get a collapsed **Nutzungsstatistik**
+expander above the main panel (`ui_stats.py`): a slider for the period (all,
+30 days, 7 days), a metric select box (jobs, processing minutes, logins,
+downloads), a split-by-user toggle, KPI tiles, a plotly stacked daily bar chart
+(`usage_chart.py`) and a per-user table. Aggregation is pure (`usage_stats.py`).
+User colors come from the full log in order of first appearance, so a period
+change never repaints a user; beyond eight users the rest fold into "Andere".
+The four modules are copied from local_translator (same author, Apache-2.0).
+
 ## Single-window workflow
 The main area is one panel — no tabs. Top to bottom:
 
