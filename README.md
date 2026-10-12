@@ -66,6 +66,7 @@ The app requires a login. Set the seed passwords in `.env` before the first run:
 ```bash
 SEED_PW_HEIN=...        # account "T. Hein"
 SEED_PW_GAST=...        # account "Gast"
+SEED_PW_BRENK=...       # account "Brenk"
 ```
 
 On first run `data/users.json` is created from them. Only bcrypt hashes are

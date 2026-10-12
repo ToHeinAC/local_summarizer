@@ -6,7 +6,7 @@ import pytest
 
 from src import auth
 
-PASSWORDS = {"T. Hein": "hein-pw", "Gast": "gast-pw"}
+PASSWORDS = {"T. Hein": "hein-pw", "Gast": "gast-pw", "Brenk": "brenk-pw"}
 
 
 @pytest.fixture
@@ -18,10 +18,10 @@ def users_root(tmp_path, monkeypatch):
     return tmp_path
 
 
-def test_seeds_the_two_default_users(users_root):
+def test_seeds_the_default_users(users_root):
     auth.ensure_seeded()
     data = json.loads((users_root / "users.json").read_text())
-    assert set(data["users"]) == {"T. Hein", "Gast"}
+    assert set(data["users"]) == {"T. Hein", "Gast", "Brenk"}
 
 
 def test_seeded_users_verify_with_their_passwords(users_root):
@@ -60,6 +60,7 @@ def test_missing_seed_passwords_raise(users_root, monkeypatch):
 
 def test_seeds_only_the_users_with_a_password_set(users_root, monkeypatch):
     monkeypatch.delenv("SEED_PW_GAST")
+    monkeypatch.delenv("SEED_PW_BRENK")
     auth.ensure_seeded()
     data = json.loads((users_root / "users.json").read_text())
     assert list(data["users"]) == ["T. Hein"]

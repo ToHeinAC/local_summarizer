@@ -28,6 +28,7 @@ DATA_ROOT = Path(__file__).resolve().parent.parent / "data"
 SEED_USERS = {
     "T. Hein": "SEED_PW_HEIN",
     "Gast": "SEED_PW_GAST",
+    "Brenk": "SEED_PW_BRENK",
 }
 
 
