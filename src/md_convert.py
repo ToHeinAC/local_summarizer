@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import base64
 import io
+import re
 from collections.abc import Callable, Iterator
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 
@@ -40,13 +41,23 @@ def _image_to_base64(pil_image) -> str:
     return base64.b64encode(buf.getvalue()).decode()
 
 
+# pdfium marks a hyphenated line break with U+FFFE (sometimes still followed by
+# the line break itself); dropping both rejoins the word.
+_SOFT_HYPHEN = re.compile("\ufffe(?:\r?\n)?")
+
+
+def clean_page_text(text: str) -> str:
+    """Rejoin pdfium-hyphenated words and normalize CRLF line endings."""
+    return _SOFT_HYPHEN.sub("", text).replace("\r\n", "\n").strip()
+
+
 def iter_pdf_pages(data: bytes, dpi: int) -> Iterator[tuple[str, object]]:
     """Yield ``('text', str)`` for pages with a text layer, else ``('image', PIL.Image)``."""
     import pypdfium2 as pdfium
 
     scale = dpi / 72
     for page in pdfium.PdfDocument(data):
-        text = page.get_textpage().get_text_range().strip()
+        text = clean_page_text(page.get_textpage().get_text_range())
         if len(text) >= TEXT_THRESHOLD:
             yield "text", text
         else:

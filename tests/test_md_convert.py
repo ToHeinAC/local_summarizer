@@ -132,3 +132,12 @@ def test_unsupported_suffix_raises_via_extract():
 
     with pytest.raises(UnsupportedFileError):
         to_markdown("x.rtf", b"data")
+
+
+def test_page_text_rejoins_pdfium_hyphenation_marks():
+    """pdfium marks a soft hyphen with U+FFFE ("Gru￾benwässer"); left in,
+    it splits the word for the LLM and leaks into summaries."""
+    raw = "radiumhaltige Gru￾benwässer und Mess￾\r\ngenauigkeit\r\nzweite Zeile"
+    assert md_convert.clean_page_text(raw) == (
+        "radiumhaltige Grubenwässer und Messgenauigkeit\nzweite Zeile"
+    )

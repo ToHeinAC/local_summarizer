@@ -28,6 +28,10 @@ progress labels and of `UnsupportedFileError`; default `"de"`):
 - **Below the threshold** → the page is scanned/image-only. It is rasterized at
   `PDF_DPI` (default 150), JPEG-encoded, and sent to the vision `OCR_MODEL`.
 
+Page text goes through `clean_page_text`: pdfium marks a hyphenated line break
+with U+FFFE ("Gru\ufffebenwässer"); the marker (and any line break after it) is
+dropped so the word is whole again, and CRLF becomes LF.
+
 Each page is classified independently, so mixed digital/scanned PDFs work. Pages
 are converted concurrently through a `ThreadPoolExecutor`
 (`MAX_CONVERT_WORKERS = 4` LLM calls in flight) — each page is an independent
