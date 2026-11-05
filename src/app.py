@@ -166,7 +166,22 @@ def _summary_options(lang: str) -> dict:
     )
     right.caption(pick(next(x["description"] for x in templates if x["id"] == template_id), lang))
 
-    return {"language": language, "template_id": template_id}
+    return {"language": language, "template_id": template_id, "focus": _focus_input(lang)}
+
+
+def _focus_input(lang: str) -> str:
+    """Optional question or direction the summary is oriented on; "" for none."""
+    with st.expander(t("focus_expander", lang), expanded=False):
+        focus = st.text_area(
+            t("focus_label", lang),
+            placeholder=t("focus_placeholder", lang),
+            max_chars=500,
+            height=90,
+            label_visibility="collapsed",
+        )
+        st.caption(t("focus_hint", lang))
+        st.markdown(t("focus_examples", lang))
+    return focus.strip()
 
 
 def _log_job_start(name: str, data: bytes, opts: dict, model: dict) -> None:
@@ -177,6 +192,7 @@ def _log_job_start(name: str, data: bytes, opts: dict, model: dict) -> None:
         language=opts["language"],
         template=opts["template_id"],
         precise=opts["llm_format"],
+        focus=bool(opts["focus"]),  # whether one was set; never its text
         file_type=os.path.splitext(name)[1].lstrip(".").lower(),
         size_kb=round(len(data) / 1024, 1),
     )
@@ -212,6 +228,7 @@ def _run(uploaded, opts: dict, model: dict, lang: str) -> None:
             # In precise mode also return the LLM-formatted document Markdown,
             # so the UI can offer it as a download alongside the summary.
             return_markdown=precise,
+            focus=opts["focus"],
         )
     except Exception as exc:  # surface any conversion/LLM failure to the user
         bar.empty()

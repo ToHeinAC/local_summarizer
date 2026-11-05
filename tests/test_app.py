@@ -194,6 +194,22 @@ def test_precision_selectbox_switches_to_the_per_page_rewrite(at, monkeypatch):
     assert "Erzeugtes Markdown herunterladen (.md)" in labels
 
 
+def test_focus_expander_is_optional_and_reaches_the_agent(at, monkeypatch):
+    """An optional focus (question or direction) steers the summary; default empty."""
+    calls = {}
+    monkeypatch.setattr("src.agent.run", lambda **kw: calls.update(kw) or "# ok")
+    assert any("Fokus" in e.label for e in at.expander)
+    focus = next(a for a in at.text_area if a.label == "Fokus der Zusammenfassung")
+    assert focus.value == ""
+    at.file_uploader[0].set_value(SAMPLE_UPLOAD).run()
+    next(b for b in at.button if b.label == "Zusammenfassen").click().run()
+    assert calls["focus"] == ""
+
+    focus.set_value("Welche Kosten entstehen?").run()
+    next(b for b in at.button if b.label == "Zusammenfassen").click().run()
+    assert calls["focus"] == "Welche Kosten entstehen?"
+
+
 def test_fast_mode_has_no_generated_markdown_download(at, monkeypatch):
     """The generated-Markdown download only appears for the precise option."""
     monkeypatch.setattr("src.agent.run", lambda **kw: "## Overview\nDone.")

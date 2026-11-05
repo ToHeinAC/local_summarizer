@@ -199,3 +199,17 @@ def test_hybrid_single_chunk_goes_straight_to_big_model(monkeypatch):
     agent.run(text="Short.", template_id="bullets", model_id="hybrid")
     assert used == ["qwen3.8-27b:latest"]
     assert unloaded == []
+
+
+def test_focus_reaches_every_map_call_and_the_finalize(recorder, small_budget):
+    focus = "Werden die Grenzwerte eingehalten?"
+    agent.run(text="A" * 15000, template_id="bullets", model_id="fast", focus=f"  {focus}\n")
+    brief, *maps, final = recorder
+    assert focus not in brief, "the overview describes the document, not the focus"
+    assert all(focus in prompt for prompt in maps)
+    assert focus in final
+
+
+def test_no_focus_adds_no_focus_block(recorder):
+    agent.run(text="A short document.", template_id="bullets", model_id="fast", focus="   ")
+    assert "FOCUS" not in recorder[0]

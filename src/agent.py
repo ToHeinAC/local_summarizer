@@ -21,9 +21,11 @@ from src.prompts import (
     BRIEF_PROMPT,
     CONTENT_FULL,
     CONTENT_NOTES,
+    FINALIZE_FOCUS,
     FINALIZE_OVERVIEW,
     FINALIZE_PROMPT,
     LANGUAGE_LABELS,
+    MAP_FOCUS,
     MAP_PROMPT,
     NOTES_PART_HEADER,
     REDUCE_PROMPT,
@@ -66,6 +68,7 @@ class SummaryState(TypedDict, total=False):
     rewrite_model: str
     pdf_dpi: int
     fast: bool
+    focus: str  # user's question or direction for the summary; "" for none
     chunks: list[str]
     brief: str  # whole-document overview; only for multi-part documents
     chunk_summaries: list[str]
@@ -174,10 +177,11 @@ def _map(state: SummaryState, config) -> dict:
     lang = _lang(state)
     _progress(config, 0.43, t("overview", lang))
     brief = run_prompt(llm, BRIEF_PROMPT.format(head=state["text"][:BRIEF_CHARS]))
+    focus = MAP_FOCUS.format(focus=state["focus"]) if state.get("focus") else ""
     summaries: list[str] = []
     total = len(chunks)
     for i, chunk in enumerate(chunks, start=1):
-        prompt = MAP_PROMPT.format(part=i, total=total, brief=brief, chunk=chunk)
+        prompt = MAP_PROMPT.format(part=i, total=total, brief=brief, focus=focus, chunk=chunk)
         summaries.append(run_prompt(llm, prompt))
         _progress(config, 0.43 + 0.37 * i / total, t("map_section", lang, done=i, total=total))
     return {"chunk_summaries": summaries, "brief": brief}
@@ -221,10 +225,13 @@ def _finalize(state: SummaryState, config) -> dict:
     if state.get("map_model_tag") and len(state["chunks"]) > 1:
         unload(state["map_model_tag"], state.get("host"))  # free VRAM for the final model
     overview, kind, content = _final_content(state)
+    language = LANGUAGE_LABELS.get(code, code)
+    focus = state.get("focus")
     prompt = FINALIZE_PROMPT.format(
-        language=LANGUAGE_LABELS.get(code, code),
+        language=language,
         template=get_template(state["template_id"])["structure"],
         overview=overview,
+        focus=FINALIZE_FOCUS.format(focus=focus, language=language) if focus else "",
         content_kind=kind,
         content=content,
     )
@@ -273,6 +280,7 @@ def run(
     on_progress: Optional[ProgressFn] = None,
     ui_lang: str = DEFAULT_LANG,
     return_markdown: bool = False,
+    focus: str = "",
 ):
     """Summarize a document and return Markdown.
 
@@ -280,7 +288,8 @@ def run(
     to Markdown first; scanned PDF pages are OCR'd with ``ocr_model``. ``fast``
     skips the per-page LLM rewrite for digital PDF pages (verbatim text layer).
     ``ui_lang`` is the GUI language of the progress labels; the summary's own
-    language is ``target_language``.
+    language is ``target_language``. ``focus`` is an optional question or
+    direction the summary is oriented on (map notes and finalize); blank = none.
 
     Returns the summary Markdown. With ``return_markdown=True`` returns a
     ``(summary, converted_markdown)`` tuple, where the second item is the text the
@@ -302,6 +311,7 @@ def run(
         "rewrite_model": rewrite_model,
         "pdf_dpi": pdf_dpi,
         "fast": fast,
+        "focus": focus.strip(),
     }
     config = {"configurable": {"on_progress": on_progress}}
     result = build_graph().invoke(state, config=config)

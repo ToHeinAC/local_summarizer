@@ -54,8 +54,21 @@ min( (num_ctx - RESERVED_TOKENS) * MIN_CHARS_PER_TOKEN ,   # never truncated
    fit. With a 128k window this practically never runs (5 parts of notes ≈
    60k chars). Progress 0.85.
 5. **finalize** — `FINALIZE_PROMPT` with the template `structure`, the target
-   language, the overview (multi-part only) and either the full document or all
-   notes. Progress 0.90→1.0.
+   language, the overview (multi-part only), the focus (if set) and either the
+   full document or all notes. Progress 0.90→1.0.
+
+### Optional focus
+`agent.run(focus="...")` (stripped; `""` = none) fills the `{focus}` slot of
+`MAP_PROMPT` with `MAP_FOCUS` and of `FINALIZE_PROMPT` with `FINALIZE_FOCUS`;
+without a focus both slots are empty and the prompts are exactly as before.
+Map needs it as well, because finalize only reads the notes: a detail on the
+focus that a part's notes dropped as routine can never reach the summary.
+Finalize opens the summary with a short (≤120 words) section under a `## `
+heading in the target language that says whether, where and how the document
+addresses the focus — or plainly that it does not — and then follows the
+template, weighted towards the focus. Works for a question and for a direction
+(e.g. formal criteria). `BRIEF_PROMPT` and `REDUCE_PROMPT` stay focus-free: the
+overview describes the document, and reduce keeps every fact anyway.
 
 ### Prompt rules and why each exists
 - **Notes stay in the source language** (`MAP_PROMPT`, `REDUCE_PROMPT`). The old
@@ -131,6 +144,7 @@ agent.run(
     on_progress=lambda frac, label: ...,
     ui_lang="de",                              # language of the progress labels
     return_markdown=False,                     # True: also return converted Markdown
+    focus="",                                  # optional question/direction
 ) -> str  # Markdown summary (or (summary, converted_markdown) if return_markdown)
 ```
 `model_id` is resolved to an Ollama tag via `models.get_model`. `ocr_model` and

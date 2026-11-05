@@ -46,13 +46,13 @@ def test_reduce_prompt_keeps_source_anchors():
 
 
 def test_finalize_prompt_has_all_slots():
-    for slot in ("{language}", "{template}", "{overview}", "{content}"):
+    for slot in ("{language}", "{template}", "{overview}", "{focus}", "{content}"):
         assert slot in prompts.FINALIZE_PROMPT
 
 
 def test_map_prompt_sees_the_whole_document_context():
     # Each part is summarised knowing the document's purpose and its position.
-    for slot in ("{brief}", "{part}", "{total}"):
+    for slot in ("{brief}", "{part}", "{total}", "{focus}"):
         assert slot in prompts.MAP_PROMPT
     assert "{head}" in prompts.BRIEF_PROMPT
 
@@ -82,3 +82,12 @@ def test_no_example_identifier_a_small_model_could_copy():
     for text in texts:
         for leaked in ("DIN 25457", "VDI 2263", "[BS 04]", "12.03.2024", "§ 29"):
             assert leaked not in text
+
+
+def test_focus_blocks_carry_the_users_focus():
+    # Map notes must keep what the focus needs; finalize must say whether and
+    # how the document answers it, without inventing an answer.
+    assert "{focus}" in prompts.MAP_FOCUS
+    assert "{focus}" in prompts.FINALIZE_FOCUS
+    assert "whether" in prompts.FINALIZE_FOCUS
+    assert "does not" in prompts.FINALIZE_FOCUS

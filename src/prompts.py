@@ -45,7 +45,7 @@ source — so whatever you leave out is lost.
 DOCUMENT OVERVIEW:
 {brief}
 
-Write the notes in the same language as the part below. Use these headings,
+{focus}Write the notes in the same language as the part below. Use these headings,
 in this order, and leave out any heading this part has nothing for:
 ### Objective and scope
 ### Method and data
@@ -96,7 +96,7 @@ below only in {language}, without the English name in brackets.
 Follow this structure and length exactly:
 {template}
 
-{overview}Base the summary only on the content below. Do not invent facts, figures or
+{overview}{focus}Base the summary only on the content below. Do not invent facts, figures or
 references.
 Formatting: Markdown headings, "-" bullets and paragraphs only.
 """ + _PLAIN + """
@@ -118,6 +118,31 @@ headings. Merge them by topic into one summary of the whole document: every
 section of the structure above appears exactly once, in that order, with its
 Markdown heading (## or ###). The note headings and part labels themselves do
 not appear.
+
+"""
+# Fill MAP_PROMPT's / FINALIZE_PROMPT's {focus} slot when the user set a focus
+# (a question to answer or a direction to weight towards); "" otherwise. Map
+# must see it too: finalize only reads the notes, so a detail on the focus that
+# the notes dropped as routine can never reach the summary.
+MAP_FOCUS = """READER'S FOCUS (set by the user):
+{focus}
+
+Besides the usual notes, record in full everything this part says about that
+focus (statements, figures, conditions, gaps), even if it looks routine, under
+the most fitting heading. Do not stretch the text to fit the focus.
+
+"""
+FINALIZE_FOCUS = """READER'S FOCUS (set by the user: a question to answer, or a direction to
+weight the summary towards):
+{focus}
+
+Orient the whole summary on this focus: content related to it gets priority and
+detail, the rest stays brief. Begin with a short section, at most 120 words,
+under a "## " Markdown heading that names the focus in {language} (never the
+English word "Focus"). It states whether the document addresses the
+focus, how and where (cite section, figure or table identifiers as written), and
+what it concludes about it. If the document does not address it, say so plainly
+instead of guessing. Then follow the structure above.
 
 """
 NOTES_PART_HEADER = "=== NOTES ON PART {part} OF {total} ==="

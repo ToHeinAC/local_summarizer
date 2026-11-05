@@ -5,7 +5,7 @@ detail lives in [docs/](docs/). See [PRD.md](PRD.md) for goals and
 [AGENTS.md](AGENTS.md) for collaboration rules.
 
 ## Status
-All planned features implemented and tested (192 tests passing). End-to-end
+All planned features implemented and tested (196 tests passing). End-to-end
 verified against a live Ollama server, including OCR of a scanned PDF. The app
 does one thing: summarize a document.
 
@@ -39,7 +39,8 @@ rendered (see [docs/ui.md](docs/ui.md)). One-click flow:
 
 - **Upload & summarize** — in the main panel pick the model and precision
   selectbox (quality parameters), upload a **PDF/DOCX/TXT/MD**, then pick summary
-  language and template, press **Zusammenfassen**. That single click calls
+  language and template, optionally set a **focus** (question or direction), press
+  **Zusammenfassen**. That single click calls
   `agent.run(filename=…, data=…, fast=…)`: the ingest node converts the file to
   text (`fast=True` → digital PDF pages verbatim; the precise option flips it to
   `fast=False` → per-page LLM rewrite; scanned pages always OCR'd by a vision
@@ -179,6 +180,14 @@ of the agent and ingestion layers. Details: [docs/architecture.md](docs/architec
   with 3-level reduce (93 map calls and ~15 min for the 184-page StrlSchV).
   Prompt rules (source-language notes, no example identifiers, no LaTeX) each
   fix a measured failure. See [docs/agent.md](docs/agent.md).
+- **Optional focus**: a collapsed *Fokus (optional)* expander under language and
+  template takes a research question or a direction (formal criteria, a content
+  emphasis), with three examples. It reaches `agent.run(focus=...)`, which adds
+  `MAP_FOCUS` to every map call (so notes keep what the focus needs) and
+  `FINALIZE_FOCUS` to finalize: the summary opens with a short section stating
+  whether, where and how the document addresses the focus, then weights the
+  template towards it. Empty (the default) = the prompts are unchanged. See
+  [docs/agent.md](docs/agent.md).
 - **Four report types**: Executive Summary (½ page), Stichpunkte (1 page),
   Ausführlich mit Referenzen (2 pages), Maßnahmen (1 page); lengths are given
   to the LLM as word counts. See [docs/templates.md](docs/templates.md).

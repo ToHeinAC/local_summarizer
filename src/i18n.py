@@ -110,6 +110,47 @@ STRINGS: dict[str, dict[str, str]] = {
     "language_label": {"de": "Sprache der Zusammenfassung", "en": "Summary language"},
     "template_caption": {"de": "VORLAGE", "en": "TEMPLATE"},
     "template_label": {"de": "Vorlage", "en": "Template"},
+    "focus_expander": {
+        "de": "Fokus (optional): Fragestellung oder Schwerpunkt vorgeben",
+        "en": "Focus (optional): set a question or emphasis",
+    },
+    "focus_label": {"de": "Fokus der Zusammenfassung", "en": "Summary focus"},
+    "focus_hint": {
+        "de": (
+            "Leer lassen für eine neutrale Zusammenfassung. Eine Frage wird in einem "
+            "eigenen Abschnitt beantwortet: ob, wo und wie das Dokument sie behandelt. "
+            "Eine Richtung gewichtet die ganze Zusammenfassung."
+        ),
+        "en": (
+            "Leave empty for a neutral summary. A question is answered in its own "
+            "section: whether, where and how the document addresses it. A direction "
+            "weights the whole summary."
+        ),
+    },
+    "focus_placeholder": {
+        "de": "Forschungsfrage oder Schwerpunkt eingeben …",
+        "en": "Enter a research question or emphasis …",
+    },
+    "focus_examples": {
+        "de": (
+            "**Beispiele**\n"
+            "- *Forschungsfrage:* Weist die Studie nach, dass die gemessenen Werte "
+            "die gesetzlichen Grenzwerte einhalten, und mit welcher Methode?\n"
+            "- *Formale Prüfung:* Achte auf formale Kriterien: Vollständigkeit, "
+            "Gliederung, Quellenangaben, Zuständigkeiten und Fristen.\n"
+            "- *Inhaltlicher Schwerpunkt:* Fasse vor allem Kosten, Zeitplan und "
+            "offene Risiken der vorgeschlagenen Maßnahmen zusammen."
+        ),
+        "en": (
+            "**Examples**\n"
+            "- *Research question:* Does the study show that the measured values "
+            "meet the legal limits, and by which method?\n"
+            "- *Formal review:* Focus on formal criteria: completeness, structure, "
+            "citations, responsibilities and deadlines.\n"
+            "- *Content emphasis:* Summarize mainly the costs, schedule and open "
+            "risks of the proposed measures."
+        ),
+    },
     "summarize_button": {"de": "Zusammenfassen", "en": "Summarize"},
     "summary_heading": {"de": "Zusammenfassung", "en": "Summary"},
     "summary_suffix": {"de": "zusammenfassung", "en": "summary"},

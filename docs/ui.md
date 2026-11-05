@@ -111,7 +111,8 @@ and `main()` renders that as an `st.error` instead of a traceback.
 never in the repo). Every line has `ts` (local ISO time with offset), `event`, `user`
 and, after login, `session` (random 8-hex id per login). Events and extra fields:
 `login_ok`; `login_failed` (`user` is the name typed); `logout`; `job_start`
-(`model` tag, `language`, `template`, `precise`, `file_type`, `size_kb`); `job_end`
+(`model` tag, `language`, `template`, `precise`, `focus` — a bool, never the text —,
+`file_type`, `size_kb`); `job_end`
 (`status` ok/error, `duration_s`); `download` (`format` md/docx/pdf/converted_md).
 No passwords, file names or text. A write error is ignored so logging never blocks
 the app. Read it with `usage.read_events` or `pandas.read_json(path, lines=True)`;
@@ -137,7 +138,11 @@ The main area is one panel — no tabs. Top to bottom:
    explaining the cost. Below it, speed/quality stars flip with the choice —
    fast = Speed ★★★ / Quality ★☆☆, precise = Speed ★☆☆ / Quality ★★★;
 3. the summary **Sprache** (with an **Auswahl** caption below it) and **Vorlage**
-   selectboxes in a 2-column row, then a `---` divider;
+   selectboxes in a 2-column row; below them a collapsed, full-width expander
+   **Fokus (optional): Fragestellung oder Schwerpunkt vorgeben** with a text area
+   (empty by default, max 500 chars), a hint and three examples (research
+   question, formal review, content emphasis). Its text goes to
+   `agent.run(focus=...)`, see [agent.md](agent.md). Then a `---` divider;
 4. a file uploader accepting **PDF/DOCX/TXT/MD**;
 5. one primary **Zusammenfassen** button (disabled until a file is uploaded and
    the chosen model is installed).
