@@ -5,7 +5,7 @@ detail lives in [docs/](docs/). See [PRD.md](PRD.md) for goals and
 [AGENTS.md](AGENTS.md) for collaboration rules.
 
 ## Status
-All planned features implemented and tested (180 tests passing). End-to-end
+All planned features implemented and tested (192 tests passing). End-to-end
 verified against a live Ollama server, including OCR of a scanned PDF. The app
 does one thing: summarize a document.
 
@@ -140,10 +140,11 @@ of the agent and ingestion layers. Details: [docs/architecture.md](docs/architec
   call per page) uses the small `REWRITE_MODEL`, so even the precise path stays
   cheap relative to a summarization-sized model, and it never rewords. See
   [docs/ingestion.md](docs/ingestion.md).
-- **Performance**: two capped-cost decisions keep the local LLM fast. (1) Every
-  Ollama call pins `num_ctx` (8192 for text, 16384 for OCR) — Ollama otherwise
-  allocates each model's full 128k window, ballooning VRAM and cutting
-  throughput ~5× with no benefit for these small prompts. (2) Scanned PDF pages
+- **Performance**: (1) Every Ollama call pins `num_ctx` explicitly — the
+  summarizer per model (`models.NUM_CTX`, 131072 for gemma4:e4b), conversion
+  at 8192 / 16384 for OCR. Left unset, Ollama allocated the trained window ×
+  `NUM_PARALLEL=4` on the shared daemon and spilled across both GPUs (~5×
+  slower); on the pinned single-slot daemon gemma4 at 128k needs ~7 GB. (2) Scanned PDF pages
   are OCR'd concurrently (`md_convert.MAX_CONVERT_WORKERS=4`); this needs
   `OLLAMA_NUM_PARALLEL≥2` on the Ollama server to matter (~1.9× on a 6-page PDF).
   Both cost no precision. See [docs/ingestion.md](docs/ingestion.md),
@@ -168,8 +169,19 @@ of the agent and ingestion layers. Details: [docs/architecture.md](docs/architec
 - **PDF export**: `fpdf2` (pure Python). Uses a system DejaVu Unicode font when
   present, else Helvetica with latin-1 fallback. See [docs/export.md](docs/export.md).
 - **Formats in**: PDF, DOCX, TXT, MD. **Formats out**: MD/PDF/DOCX (the summary).
-- **Chunking**: character-bounded (6000/200 overlap); single-chunk documents
-  skip the map/reduce passes. See [docs/agent.md](docs/agent.md).
+- **Summarization pipeline (window-sized)**: a document that fits one prompt
+  (≤ ~108k chars ≈ 30 pages for gemma4:e4b) is summarized in a **single pass**
+  from the full text. Longer ones are cut into the fewest balanced parts; one
+  call writes a document overview from the opening pages, each part gets
+  structured notes (objective / method / results / conclusions / measures /
+  references) *with that overview*, and the final template sees all notes at
+  once — reduce only runs if they overflow. Replaced fixed 6000-char chunks
+  with 3-level reduce (93 map calls and ~15 min for the 184-page StrlSchV).
+  Prompt rules (source-language notes, no example identifiers, no LaTeX) each
+  fix a measured failure. See [docs/agent.md](docs/agent.md).
+- **Four report types**: Executive Summary (½ page), Stichpunkte (1 page),
+  Ausführlich mit Referenzen (2 pages), Maßnahmen (1 page); lengths are given
+  to the LLM as word counts. See [docs/templates.md](docs/templates.md).
 
 ## Run & test
 ```bash

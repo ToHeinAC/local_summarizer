@@ -85,6 +85,25 @@ MODELS: list[dict] = [
 
 DEFAULT_MODEL_ID = "standard"
 
+# Context window (num_ctx) per Ollama tag: the largest that keeps the model
+# 100 % on one 24 GB RTX 4090 (pinned daemon, NUM_PARALLEL=1, measured
+# 2026-11-05). gemma4's sliding-window attention makes 128k cheap (7 GB in
+# total); qwen3:14b is capped by its trained window, the 27B by VRAM (128k
+# spills 15 % to CPU). Unknown tags get the safe default.
+NUM_CTX: dict[str, int] = {
+    "LiquidAI/lfm2.5-1.2b-instruct:latest": 32768,
+    "gemma4:e4b": 131072,
+    "qwen3:14b": 40960,
+    "gpt-oss:20b": 131072,
+    "qwen3.8-27b:latest": 65536,
+}
+DEFAULT_NUM_CTX = 8192
+
+
+def num_ctx(tag: str) -> int:
+    """Context window to request for ``tag``."""
+    return NUM_CTX.get(tag, DEFAULT_NUM_CTX)
+
 
 def list_models() -> list[dict]:
     """Return all registered models."""

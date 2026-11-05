@@ -28,7 +28,7 @@ def load_config() -> Config:
         ollama_host=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
         app_port=int(os.getenv("APP_PORT", "8530")),
         default_model=os.getenv("DEFAULT_MODEL", "standard"),
-        default_template=os.getenv("DEFAULT_TEMPLATE", "standard"),
+        default_template=os.getenv("DEFAULT_TEMPLATE", "bullets"),
         default_language=os.getenv("DEFAULT_LANGUAGE", "auto"),
         ocr_model=os.getenv("OCR_MODEL", "deepseek-ocr:3b"),
         rewrite_model=os.getenv("REWRITE_MODEL", "gemma3:4b"),

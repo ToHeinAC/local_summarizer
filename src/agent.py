@@ -7,6 +7,7 @@ Streamlit out of the agent layer.
 
 from __future__ import annotations
 
+import math
 from typing import Callable, Optional, TypedDict
 
 from langgraph.graph import END, StateGraph
@@ -14,15 +15,37 @@ from langgraph.graph import END, StateGraph
 from src.extract import to_markdown
 from src.i18n import DEFAULT_LANG, t
 from src.language import detect_language
-from src.models import get_model
+from src.models import get_model, num_ctx
 from src.ollama_client import unload
-from src.prompts import FINALIZE_PROMPT, LANGUAGE_LABELS, MAP_PROMPT, REDUCE_PROMPT
+from src.prompts import (
+    BRIEF_PROMPT,
+    CONTENT_FULL,
+    CONTENT_NOTES,
+    FINALIZE_OVERVIEW,
+    FINALIZE_PROMPT,
+    LANGUAGE_LABELS,
+    MAP_PROMPT,
+    NOTES_PART_HEADER,
+    REDUCE_PROMPT,
+)
 from src.templates import get_template
-from src.tools import make_llm, run_prompt
+from src.tools import NUM_PREDICT, make_llm, run_prompt
 
-CHUNK_SIZE = 6000
-CHUNK_OVERLAP = 200
-REDUCE_BATCH = 8  # partial summaries combined per hierarchical reduce step
+# Source text per prompt is sized from the model's window (models.NUM_CTX), not
+# a fixed character count. MAX_INPUT_TOKENS caps it for summary quality: one
+# answer holds only a few thousand tokens of notes, so bigger parts lose more
+# (StrlSchV: 113 of 200 §§ reach the notes with 32k parts, 49 with 120k).
+# RESERVED_TOKENS covers the prompt, the overview and the answer.
+MAX_INPUT_TOKENS = 32768
+RESERVED_TOKENS = NUM_PREDICT + 2048
+# Measured 3.0-3.5 chars/token on German reports (~4 on English prose); the
+# quality cap uses the typical rate. The hard window uses the worst case:
+# Ollama silently drops the start of a prompt that exceeds num_ctx.
+CHARS_PER_TOKEN = 3.3
+MIN_CHARS_PER_TOKEN = 2.5
+CHUNK_OVERLAP = 1000
+BRIEF_CHARS = 20000  # title pages + table of contents + introduction
+REDUCE_BATCH = 8  # note sets combined per hierarchical reduce step
 INGEST_SHARE = 0.40  # progress budget for the file -> Markdown conversion
 
 ProgressFn = Callable[[float, str], None]
@@ -44,21 +67,39 @@ class SummaryState(TypedDict, total=False):
     pdf_dpi: int
     fast: bool
     chunks: list[str]
+    brief: str  # whole-document overview; only for multi-part documents
     chunk_summaries: list[str]
     summary: str
 
 
-def split_text(text: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
-    """Split ``text`` into overlapping character-bounded chunks."""
+def input_chars(tag: str) -> int:
+    """Characters of source text one prompt to ``tag`` may safely carry."""
+    never_truncated = (num_ctx(tag) - RESERVED_TOKENS) * MIN_CHARS_PER_TOKEN
+    return int(min(never_truncated, MAX_INPUT_TOKENS * CHARS_PER_TOKEN))
+
+
+def split_text(text: str, size: int, overlap: int = CHUNK_OVERLAP) -> list[str]:
+    """Split ``text`` into the fewest balanced chunks of at most ``size`` chars.
+
+    Chunks overlap by ``overlap`` chars and end on a line break where one is
+    near, so no sentence is cut mid-word and no tiny tail chunk is left over.
+    """
     if len(text) <= size:
         return [text]
+    overlap = min(overlap, size // 4)  # guarantees every chunk advances
+    count = math.ceil(len(text) / (size - overlap))
+    target = math.ceil(len(text) / count)
     chunks: list[str] = []
     start = 0
-    step = max(1, size - overlap)
-    while start < len(text):
-        chunks.append(text[start : start + size])
-        start += step
-    return chunks
+    while True:
+        end = start + target + overlap
+        if end >= len(text):
+            chunks.append(text[start:])
+            return chunks
+        cut = text.rfind("\n", start + target // 2, end)
+        end = cut + 1 if cut != -1 else end
+        chunks.append(text[start:end])
+        start = end - overlap
 
 
 def _progress(config, fraction: float, label: str) -> None:
@@ -71,9 +112,13 @@ def _llm(state: SummaryState):
     return make_llm(state["model_tag"], state.get("host"))
 
 
+def _map_tag(state: SummaryState) -> str:
+    """Tag for the per-chunk passes: the hybrid's small model, else the main one."""
+    return state.get("map_model_tag") or state["model_tag"]
+
+
 def _map_llm(state: SummaryState):
-    """LLM for the per-chunk passes: the hybrid's small model, else the main one."""
-    return make_llm(state.get("map_model_tag") or state["model_tag"], state.get("host"))
+    return make_llm(_map_tag(state), state.get("host"))
 
 
 def _lang(state: SummaryState) -> str:
@@ -110,59 +155,88 @@ def _ingest(state: SummaryState, config) -> dict:
 
 
 def _chunk(state: SummaryState, config) -> dict:
-    chunks = split_text(state["text"])
+    """One part if the whole text fits the final model, else balanced parts."""
+    text = state["text"]
+    if len(text) <= input_chars(state["model_tag"]):
+        chunks = [text]
+    else:
+        chunks = split_text(text, input_chars(_map_tag(state)))
     _progress(config, 0.42, t("split", _lang(state), count=len(chunks)))
     return {"chunks": chunks}
 
 
 def _map(state: SummaryState, config) -> dict:
+    """Take structured notes on each part, all guided by one document overview."""
     chunks = state["chunks"]
     if len(chunks) == 1:
-        return {"chunk_summaries": chunks}
+        return {"chunk_summaries": chunks, "brief": ""}
     llm = _map_llm(state)
     lang = _lang(state)
+    _progress(config, 0.43, t("overview", lang))
+    brief = run_prompt(llm, BRIEF_PROMPT.format(head=state["text"][:BRIEF_CHARS]))
     summaries: list[str] = []
+    total = len(chunks)
     for i, chunk in enumerate(chunks, start=1):
-        summaries.append(run_prompt(llm, MAP_PROMPT.format(chunk=chunk)))
-        label = t("map_section", lang, done=i, total=len(chunks))
-        _progress(config, 0.42 + 0.38 * i / len(chunks), label)
-    return {"chunk_summaries": summaries}
+        prompt = MAP_PROMPT.format(part=i, total=total, brief=brief, chunk=chunk)
+        summaries.append(run_prompt(llm, prompt))
+        _progress(config, 0.43 + 0.37 * i / total, t("map_section", lang, done=i, total=total))
+    return {"chunk_summaries": summaries, "brief": brief}
+
+
+def _join(summaries: list[str]) -> str:
+    return "\n\n---\n\n".join(summaries)
 
 
 def _reduce(state: SummaryState, config) -> dict:
+    """Merge note sets hierarchically until they fit one finalize prompt."""
     summaries = state["chunk_summaries"]
     llm = _map_llm(state)
+    budget = input_chars(state["model_tag"])
     _progress(config, 0.85, t("reducing", _lang(state)))
-    while len(summaries) > 1:
-        batched: list[str] = []
-        for i in range(0, len(summaries), REDUCE_BATCH):
-            group = summaries[i : i + REDUCE_BATCH]
-            joined = "\n\n---\n\n".join(group)
-            batched.append(run_prompt(llm, REDUCE_PROMPT.format(summaries=joined)))
-        summaries = batched
+    while len(summaries) > 1 and len(_join(summaries)) > budget:
+        summaries = [
+            run_prompt(llm, REDUCE_PROMPT.format(summaries=_join(summaries[i : i + REDUCE_BATCH])))
+            for i in range(0, len(summaries), REDUCE_BATCH)
+        ]
     return {"chunk_summaries": summaries}
+
+
+def _final_content(state: SummaryState) -> tuple[str, str, str]:
+    """(overview, content kind, content) for FINALIZE_PROMPT."""
+    notes = state["chunk_summaries"]
+    if len(state["chunks"]) == 1:
+        return "", CONTENT_FULL, notes[0]
+    total = len(notes)
+    content = "\n\n".join(
+        f"{NOTES_PART_HEADER.format(part=i, total=total)}\n{n}"
+        for i, n in enumerate(notes, start=1)
+    )
+    return FINALIZE_OVERVIEW.format(brief=state["brief"], total=total), CONTENT_NOTES, content
 
 
 def _finalize(state: SummaryState, config) -> dict:
     target = state.get("target_language", "auto")
     code = state["source_language"] if target == "auto" else target
-    language = LANGUAGE_LABELS.get(code, code)
-    template = get_template(state["template_id"])["structure"]
-    content = state["chunk_summaries"][0]
     _progress(config, 0.90, t("finalizing", _lang(state)))
-    map_tag = state.get("map_model_tag")
-    if map_tag and len(state["chunks"]) > 1:
-        unload(map_tag, state.get("host"))  # free VRAM for the large final model
-    summary = run_prompt(
-        _llm(state),
-        FINALIZE_PROMPT.format(language=language, template=template, content=content),
+    if state.get("map_model_tag") and len(state["chunks"]) > 1:
+        unload(state["map_model_tag"], state.get("host"))  # free VRAM for the final model
+    overview, kind, content = _final_content(state)
+    prompt = FINALIZE_PROMPT.format(
+        language=LANGUAGE_LABELS.get(code, code),
+        template=get_template(state["template_id"])["structure"],
+        overview=overview,
+        content_kind=kind,
+        content=content,
     )
+    summary = run_prompt(_llm(state), prompt)
     _progress(config, 1.0, t("done", _lang(state)))
     return {"summary": summary}
 
 
 def _needs_reduce(state: SummaryState) -> str:
-    return "reduce" if len(state["chunk_summaries"]) > 1 else "finalize"
+    notes = state["chunk_summaries"]
+    too_long = len(_join(notes)) > input_chars(state["model_tag"])
+    return "reduce" if len(notes) > 1 and too_long else "finalize"
 
 
 def build_graph():

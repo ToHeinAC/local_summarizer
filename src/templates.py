@@ -8,102 +8,103 @@ density.
 
 from __future__ import annotations
 
+# Page targets are given to the LLM as word counts (one A4 page of prose is
+# roughly 500 words). Heading names are English here; FINALIZE_PROMPT has the
+# model translate them into the summary language.
 TEMPLATES: list[dict] = [
     {
         "id": "executive",
-        "label": {"de": "Management (knapp)", "en": "Executive (terse)"},
+        "label": {"de": "Executive Summary (½ Seite)", "en": "Executive summary (½ page)"},
         "description": {
-            "de": "Überblick in 3-5 Sätzen für Entscheider.",
-            "en": "3-5 sentence high-level overview for decision makers.",
+            "de": "Fließtext für Entscheider: Ziel, entscheidende Ergebnisse, Schlussfolgerung.",
+            "en": "Prose for decision makers: objective, decisive results, conclusion.",
         },
         "structure": (
-            "A single short paragraph of 3-5 sentences capturing only the most "
-            "important conclusions. No headings, no lists."
-        ),
-    },
-    {
-        "id": "standard",
-        "label": {"de": "Standard", "en": "Standard"},
-        "description": {
-            "de": "Ausgewogene Zusammenfassung mit kurzem Überblick und Kernpunkten.",
-            "en": "Balanced summary with a short overview and key points.",
-        },
-        "structure": (
-            "A '## Overview' section (2-4 sentences) followed by a "
-            "'## Key Points' section with 4-8 concise bullet points."
-        ),
-    },
-    {
-        "id": "detailed",
-        "label": {"de": "Ausführlich", "en": "Detailed"},
-        "description": {
-            "de": "Abschnittsweise Zusammenfassung, die die Struktur erhält.",
-            "en": "Section-by-section summary preserving structure.",
-        },
-        # MAP_PROMPT and REDUCE_PROMPT carry every identifier through verbatim
-        # for the detailed_refs template, so this one must opt out explicitly.
-        "structure": (
-            "A '## Summary' overview, then one '### ' subsection per major "
-            "topic in the document, each with 5-15 sentences. End with a "
-            "'## Conclusion' section. Write flowing prose: do not anchor "
-            "statements with inline clause, figure, table or document "
-            "identifiers; name an identifier only when it is itself the "
-            "subject of what you are describing."
-        ),
-    },
-    {
-        "id": "detailed_refs",
-        "label": {
-            "de": "Ausführlich (mit Refs)",
-            "en": "Detailed (with references)",
-        },
-        "description": {
-            "de": "Abschnittsweise Zusammenfassung mit Zahlen, Paragraphen- "
-            "und Quellenangaben.",
-            "en": "Section-by-section summary keeping figures, clause numbers "
-            "and references.",
-        },
-        "structure": (
-            "A '## Summary' overview, then one '### ' subsection per major "
-            "topic in the document, each with 5-15 sentences. Give every major "
-            "topic in the content its own subsection; do not merge distinct "
-            "topics together and do not leave one out. End with a "
-            "'## Conclusion' section. Throughout, cite the source's own anchors "
-            "inline and verbatim: clause and section numbers, "
-            "figure/table/appendix identifiers, key quantities with units, and "
-            "references to other documents or standards — e.g. "
-            "\"gemäß § 29 Abs. 2 ...\", \"Abbildung 4 zeigt ...\", "
-            "\"nach DIN 25457\". Cite only identifiers that appear in the "
-            "content; never invent or guess one."
+            "An executive summary of 250-300 words (half an A4 page) for decision "
+            "makers: three paragraphs of continuous prose, no headings, no lists. "
+            "Paragraph 1: what the document is, who prepared it for whom, and its "
+            "objective. Paragraph 2: the decisive results with their key figures. "
+            "Paragraph 3: the conclusions and the recommended next steps."
         ),
     },
     {
         "id": "bullets",
-        "label": {"de": "Stichpunkte", "en": "Bullet key-points"},
+        "label": {"de": "Stichpunkte (1 Seite)", "en": "Bullet points (1 page)"},
         "description": {
-            "de": "Einfache Liste der wichtigsten Erkenntnisse.",
-            "en": "Flat list of the most important takeaways.",
+            "de": "Zielstellung, Methodik und Ergebnisse als Stichpunktliste.",
+            "en": "Objective, methodology and results as bullet points.",
         },
         "structure": (
-            "Only a Markdown bullet list of 6-20 key takeaways. "
-            "No headings, no prose paragraphs."
+            "A bullet-point summary of 450-550 words (one A4 page) with exactly "
+            "these three sections:\n"
+            "'## Objective' - 2-3 bullets: what the document sets out to do and why.\n"
+            "'## Methodology' - 3-5 bullets: approach, data, measurements, models "
+            "or sources used.\n"
+            "'## Results' - 10-16 bullets: the main findings and conclusions, each "
+            "with its key figures and units.\n"
+            "Every bullet is one or two complete sentences. No prose outside the "
+            "bullets. Fill the page: stay within 450-550 words, not fewer."
+        ),
+    },
+    {
+        "id": "detailed",
+        "label": {
+            "de": "Ausführlich mit Referenzen (2 Seiten)",
+            "en": "Detailed with references (2 pages)",
+        },
+        "description": {
+            "de": "Zielstellung, Methodik, Ergebnisse je Thema, Schlussfolgerungen "
+            "und die wesentlichen zitierten Dokumente.",
+            "en": "Objective, methodology, results per topic, conclusions and the "
+            "key documents cited.",
+        },
+        "structure": (
+            "A detailed summary of 1000-1200 words (two A4 pages) with these sections:\n"
+            "'## Objective' - one paragraph: purpose, scope, author and client, context.\n"
+            "'## Methodology' - one paragraph: approach, data, measurements, models "
+            "and assumptions.\n"
+            "'## Results' - one '### ' subsection per major topic of the document, "
+            "each with 4-8 sentences of prose; give every major topic its own "
+            "subsection and leave none out.\n"
+            "'## Conclusions' - one paragraph with the conclusions and recommendations.\n"
+            "'## References' - a bullet list of the 5-12 most important documents, "
+            "standards and regulations the document builds on (not its whole "
+            "bibliography), each with its identifier "
+            "exactly as the document writes it and a few words on what it is used "
+            "for; leave out a reference the content gives no detail on.\n"
+            "Throughout, cite the source's own anchors inline and verbatim: section "
+            "and clause numbers, figure/table/appendix identifiers, key quantities "
+            "with units and citation keys, the way the document itself writes "
+            "them (a § number, 'Abbildung 3-2', a bracketed key). Cite only "
+            "identifiers that appear in the content; never invent or guess one."
         ),
     },
     {
         "id": "action_items",
-        "label": {"de": "Maßnahmen", "en": "Action items"},
+        "label": {"de": "Maßnahmen (1 Seite)", "en": "Action items (1 page)"},
         "description": {
-            "de": "Entscheidungen und nächste Schritte als Aufgaben.",
-            "en": "Decisions and next steps extracted as tasks.",
+            "de": "Kurz Ziel und Methodik, dann Erkenntnisse, Schlussfolgerungen und Maßnahmen.",
+            "en": "Brief objective and method, then findings, conclusions and measures.",
         },
         "structure": (
-            "A '## Decisions' bullet list and a '## Action Items' bullet list. "
-            "Each action item starts with a verb. Omit a section if empty."
+            "An action-oriented summary of 450-550 words (one A4 page) with these "
+            "sections:\n"
+            "'## Objective' - one or two sentences.\n"
+            "'## Methodology' - one or two sentences.\n"
+            "'## Key Findings' - 4-8 bullets with the essential findings and their "
+            "key figures.\n"
+            "'## Conclusions' - 3-6 bullets: what the document concludes from the findings.\n"
+            "'## Measures' - 4-10 bullets: the measures, recommendations and next "
+            "steps that follow from the document, each as one complete, grammatical "
+            "sentence that does not address the reader, naming the responsible "
+            "party, deadline or target value where the document states one. List "
+            "only measures the document supports; do not invent new ones.\n"
+            "Fill the page: stay within 450-550 words, not fewer."
         ),
     },
 ]
 
-DEFAULT_TEMPLATE_ID = "standard"
+DEFAULT_TEMPLATE_ID = "bullets"
 
 
 def list_templates() -> list[dict]:

@@ -46,9 +46,39 @@ def test_reduce_prompt_keeps_source_anchors():
 
 
 def test_finalize_prompt_has_all_slots():
-    for slot in ("{language}", "{template}", "{content}"):
+    for slot in ("{language}", "{template}", "{overview}", "{content}"):
         assert slot in prompts.FINALIZE_PROMPT
+
+
+def test_map_prompt_sees_the_whole_document_context():
+    # Each part is summarised knowing the document's purpose and its position.
+    for slot in ("{brief}", "{part}", "{total}"):
+        assert slot in prompts.MAP_PROMPT
+    assert "{head}" in prompts.BRIEF_PROMPT
+
+
+def test_notes_stay_in_the_source_language():
+    # English notes on a German report were back-translated with errors.
+    assert "same language" in prompts.MAP_PROMPT
+    assert "same language" in prompts.REDUCE_PROMPT
+
+
+def test_finalize_forbids_markup_the_exporters_cannot_render():
+    assert "LaTeX" in prompts.FINALIZE_PROMPT
 
 
 def test_auto_language_label_present():
     assert prompts.LANGUAGE_LABELS["auto"]
+
+
+def test_no_example_identifier_a_small_model_could_copy():
+    """gemma4:e4b listed "DIN 25457" and "[BS 04]" from the old examples as
+    references of an EPA report. Examples may name a category, never a
+    concrete identifier."""
+    from src import templates
+
+    texts = [v for k, v in vars(prompts).items() if k.isupper() and isinstance(v, str)]
+    texts += [t["structure"] for t in templates.list_templates()]
+    for text in texts:
+        for leaked in ("DIN 25457", "VDI 2263", "[BS 04]", "12.03.2024", "§ 29"):
+            assert leaked not in text

@@ -3,19 +3,19 @@
 Run: `uv run pytest`. Tests are fully offline — the summarizer LLM, the
 conversion/OCR calls, the model-availability query and GPU/daemon discovery
 (`nvidia-smi`, `ollama serve`) are all monkeypatched, so no Ollama server, GPU
-or network is required. 180 tests total (well under the 200 cap).
+or network is required. 192 tests total (under the 200 cap).
 
 | File | Covers |
 |---|---|
 | `test_config.py` | defaults + env overrides, incl. `OCR_MODEL`/`REWRITE_MODEL`/`PDF_DPI` |
-| `test_prompts.py` | prompt constants and their `{}` slots, OCR/rewrite prompt invariants |
+| `test_prompts.py` | prompt constants and their `{}` slots, overview/part slots, source-language notes, no-LaTeX rule, OCR/rewrite prompt invariants |
 | `test_extract.py` | pdf/docx/txt/md → Markdown, rewrite vs OCR routing, unsupported/no extension, stripping |
-| `test_md_convert.py` | text-layer detection, OCR prompt selection, DOCX headings/lists/tables/order, VRAM unload, page progress |
+| `test_md_convert.py` | text-layer detection, U+FFFE hyphen rejoin, OCR prompt selection, DOCX headings/lists/tables/order, VRAM unload, page progress |
 | `test_theme.py` | palette keys, CSS `<style>` block, font imports, icon-font guard |
 | `test_language.py` | English/German detection, fallbacks |
-| `test_models.py` | registry shape, default, availability annotation, unreachable server |
-| `test_templates.py` | registry shape, default, unknown id, `detailed_refs` cites source anchors while `detailed` suppresses them |
-| `test_agent.py` | chunk split, single-pass vs map-reduce, progress monotonicity, Markdown-first ingest, `fast=True` skips the per-page rewrite, `return_markdown` tuple, language resolution, empty input |
+| `test_models.py` | registry shape, default, availability annotation, unreachable server, a measured `num_ctx` for every tag |
+| `test_templates.py` | exactly the four report types, default, length targets, objective/method sections, `detailed` cites and lists references, `action_items` ends in measures |
+| `test_agent.py` | balanced line-aligned chunk split, window-sized budget, whole document in one prompt when it fits, overview → notes → final, reduce only on overflow, progress monotonicity, Markdown-first ingest, `fast=True` skips the per-page rewrite, `return_markdown` tuple, language resolution, empty input |
 | `test_export.py` | md/docx/pdf output validity, unicode, exporters registry |
 | `test_gpu_placement.py` | nvidia-smi parsing, single-GPU pin/split policy, `cuda_env` |
 | `test_ollama_server.py` | pinned-daemon resolution (fail-open paths, adoption, caching), model-store discovery, VRAM size estimate |

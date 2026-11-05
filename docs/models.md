@@ -34,6 +34,25 @@ model in the registry and benefits the most from GPU pinning (see
 [gpu.md](gpu.md)): unpinned it is split across both cards (29 tok/s measured),
 pinned to one it reaches ~44 tok/s.
 
+## Context window per model (`NUM_CTX`)
+`num_ctx(tag)` returns the window `tools.make_llm` requests; unknown tags get
+`DEFAULT_NUM_CTX=8192`. Values are the largest window that keeps the model
+100 % on one RTX 4090 (24 GB), measured on the pinned daemon
+(`NUM_PARALLEL=1`) on 2026-11-05 via `ollama ps` + `nvidia-smi`:
+
+| tag | `num_ctx` | GPU memory at that window | limit |
+|---|---|---|---|
+| `LiquidAI/lfm2.5-1.2b-instruct:latest` | 32768 | ~1.2 GB model | chosen, not VRAM-bound (128k fits in 2.9 GB); input is capped at 32k anyway |
+| `gemma4:e4b` | 131072 | ~7.2 GB card total | trained max; sliding-window attention keeps KV small |
+| `qwen3:14b` | 40960 | ~16 GB | trained max (larger requests are clamped) |
+| `gpt-oss:20b` | 131072 | ~16 GB | trained max |
+| `qwen3.8-27b:latest` | 65536 | ~21 GB | VRAM: 131072 spills 15 % to CPU |
+
+The agent sizes its chunks from this window (see [agent.md](agent.md)); a test
+requires an entry for every registry tag so none silently falls back to 8192.
+On the shared fallback daemon (`NUM_PARALLEL=4`) Ollama allocates the window
+per slot, so the larger windows cost proportionally more VRAM there.
+
 `speed`/`quality` are 1-3 metrics rendered as stars in the UI. Tags match the
 PRD and the user's `ollama list`. `label` and `note` are `{"de": ..., "en": ...}`
 dicts read with `i18n.pick`, so the sidebar follows the GUI language.

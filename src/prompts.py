@@ -4,55 +4,125 @@ Never embed prompt strings inline in other modules. Placeholders use
 ``str.format`` style ({name}); callers fill them before invoking the LLM.
 """
 
-MAP_PROMPT = """You are summarizing one section of a longer document.
-Write a faithful, self-contained summary of the section below.
-Keep every key fact, name, number, and conclusion.
-
-Copy the following verbatim wherever they appear — they are the anchors a reader
-needs to find the passage in the source:
-1. Quantities with their units (12,4 mg/kg, 3,2 Mio. EUR, 15 %).
-2. Section and clause identifiers (§ 29 Abs. 2, Art. 5, Clause 4.1, 3.2.1).
-3. Figure, table and appendix identifiers (Abbildung 4, Table 2, Anhang B).
-4. References to other documents, standards and norms (DIN 25457, VDI 2263,
-   "Gutachten vom 12.03.2024").
-5. Names of people and organisations, and dates.
-
+# Shared by MAP_PROMPT and REDUCE_PROMPT: finalize only ever sees their output,
+# so an identifier dropped here can never be cited in the summary.
+_ANCHORS = """Copy these verbatim wherever they appear — they let a reader find the passage
+in the source:
+1. quantities with their units;
+2. section and clause identifiers (§ and Art. numbers, numbered headings);
+3. figure, table and appendix identifiers (Abbildung, Table, Anhang, ...);
+4. citations of other documents: standards and norms (DIN, ISO, VDI numbers),
+   laws, reports and citation keys exactly as the source writes them;
+5. names of people and organisations, and dates.
 Reproduce each one exactly as written: do not renumber, round, translate, or
-abbreviate. Keep every fact in the same sentence as the identifier it belongs to.
-Do not add information that is not present. Output plain prose, no preamble.
+abbreviate. Keep every fact in the same bullet as the identifier it belongs to.
+Only use identifiers that appear in the text itself — never take one from
+these instructions."""
 
-SECTION:
+# Shared by every note-taking prompt and FINALIZE_PROMPT: the exporters render
+# only headings, bullets and paragraphs, and small models drift into LaTeX.
+_PLAIN = """Write units, isotopes and formulas as plain text (Ra-226, 650 nSv/h, BaSO4,
+Kd in ml/g) — no LaTeX, no $ signs, no bold, no tables."""
+
+# Only for documents too long for one prompt: gives every map call the global
+# context (purpose, structure) a single part cannot show on its own.
+BRIEF_PROMPT = """Below are the opening pages of a long document (title page, table of
+contents, abstract or introduction). Write a short overview of the whole
+document, at most 200 words, in the same language as the document:
+- title, author or issuing organisation, client, date (if stated)
+- type of document (report, study, regulation, ...) and its stated objective
+- the main chapters or parts, in order
+Use only what is written there. """ + _PLAIN + """ No preamble.
+
+OPENING PAGES:
+{head}
+"""
+
+MAP_PROMPT = """You are taking notes on part {part} of {total} of a long document. The final
+summary will be written from these notes alone — its writer never sees the
+source — so whatever you leave out is lost.
+
+DOCUMENT OVERVIEW:
+{brief}
+
+Write the notes in the same language as the part below. Use these headings,
+in this order, and leave out any heading this part has nothing for:
+### Objective and scope
+### Method and data
+### Results
+### Conclusions
+### Recommendations and measures
+### Referenced documents
+
+Under each heading write concise, complete bullet points, at most 800 words in
+total. Weight them by what matters for the document's overall objective (see
+the overview): main results, key figures, conclusions and recommendations in
+full; routine detail briefly or not at all. Never repeat a bullet.
+Under "Referenced documents" list only what the text builds on — documents cited
+for its method, data, limits or conclusions. If this part is a bibliography,
+keep at most the 15 entries the document relies on most, not the whole list.
+
+""" + _ANCHORS + """
+""" + _PLAIN + """
+
+Do not add information that is not present. No preamble.
+
+PART {part} OF {total}:
 {chunk}
 """
 
-REDUCE_PROMPT = """You are combining several partial summaries of one document
-into a single coherent summary. Merge overlapping points, remove repetition,
-and preserve every distinct key fact and conclusion. Do not add new information.
+REDUCE_PROMPT = """You are merging notes taken on consecutive parts of one document into a single
+set of notes. Keep the same headings, write in the same language as the notes,
+merge overlapping points, remove repetition, and keep every distinct fact,
+figure, conclusion, recommendation and reference. Do not add new information.
 
-Every identifier, quantity and reference that appears in the partial summaries
-must appear in your combined summary, unchanged: section and clause numbers
-(§ 29 Abs. 2, Art. 5), figure/table/appendix identifiers, quantities with their
-units, references to other documents and standards, names and dates. Merging two
-mentions of the same identifier is fine; dropping one is not.
+Every identifier, quantity and reference in the notes must appear in your merged
+notes, unchanged: section and clause numbers (§ and Art. numbers),
+figure/table/appendix identifiers, quantities with their units, references to
+other documents and standards, names and dates. Merging two mentions of the same
+identifier is fine; dropping one is not.
+""" + _PLAIN + """
 
-Output plain prose, no preamble.
+No preamble.
 
-PARTIAL SUMMARIES:
+NOTES:
 {summaries}
 """
 
-FINALIZE_PROMPT = """You are producing the final summary of a document.
+FINALIZE_PROMPT = """You are writing the final summary of a document.
 
-Write the summary in this language: {language}.
-Follow this structure and level of detail exactly:
+Write everything in {language}, including the headings: give each heading named
+below only in {language}, without the English name in brackets.
+Follow this structure and length exactly:
 {template}
 
-Base the summary only on the content below. Do not invent facts.
-Output valid Markdown, no preamble or closing remarks.
+{overview}Base the summary only on the content below. Do not invent facts, figures or
+references.
+Formatting: Markdown headings, "-" bullets and paragraphs only.
+""" + _PLAIN + """
+Never repeat a sentence, bullet or section.
+Output only the summary: no preamble, no closing remarks.
 
-CONTENT:
+CONTENT ({content_kind}):
 {content}
 """
+
+# Fills FINALIZE_PROMPT's {overview} / {content_kind} slots. Multi-part only:
+# without the merge rule gemma copied the per-part note layout and restarted
+# the whole structure for every part (StrlSchV: "Zielsetzung" three times).
+FINALIZE_OVERVIEW = """DOCUMENT OVERVIEW:
+{brief}
+
+The content is notes on {total} consecutive parts, each under the same note
+headings. Merge them by topic into one summary of the whole document: every
+section of the structure above appears exactly once, in that order, with its
+Markdown heading (## or ###). The note headings and part labels themselves do
+not appear.
+
+"""
+NOTES_PART_HEADER = "=== NOTES ON PART {part} OF {total} ==="
+CONTENT_FULL = "the full document"
+CONTENT_NOTES = "notes taken on consecutive parts of the document"
 
 # --- Markdown conversion (src/md_convert.py) --------------------------------
 

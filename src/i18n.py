@@ -125,6 +125,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "converted": {"de": "In Markdown umgewandelt", "en": "Converted to Markdown"},
     "read_document": {"de": "Dokument gelesen", "en": "Read document"},
     "split": {"de": "In {count} Abschnitt(e) geteilt", "en": "Split into {count} section(s)"},
+    "overview": {"de": "Erfasse Dokumentüberblick", "en": "Reading document overview"},
     "map_section": {
         "de": "Fasse Abschnitt {done}/{total} zusammen",
         "en": "Summarizing section {done}/{total}",
