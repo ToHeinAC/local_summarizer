@@ -47,3 +47,11 @@ def test_primary_button_label_is_white():
 def test_custom_palette_is_used():
     css = theme.build_css({**theme.FOREST, "primary": "#ff0000"})
     assert "#ff0000" in css
+
+
+def test_focus_expander_is_highlighted():
+    # The optional focus expander must stand out: thick green border + halo.
+    css = theme.build_css()
+    block = css.split(".st-key-focus_box details", 1)[1].split("}", 1)[0]
+    assert f"3px solid {theme.FOREST['primary']}" in block
+    assert theme.FOREST["halo"] in block

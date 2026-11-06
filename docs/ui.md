@@ -141,7 +141,9 @@ The main area is one panel — no tabs. Top to bottom:
    selectboxes in a 2-column row; below them a collapsed, full-width expander
    **Fokus (optional): Fragestellung oder Schwerpunkt vorgeben** with a text area
    (empty by default, max 500 chars), a hint and three examples (research
-   question, formal review, content emphasis). Its text goes to
+   question, formal review, content emphasis). `key="focus_box"` lets the CSS
+   (`.st-key-focus_box details`) give it a 3px `primary` border, a light green
+   background and a soft green halo (`FOREST["halo"]`). Its text goes to
    `agent.run(focus=...)`, see [agent.md](agent.md). Then a `---` divider;
 4. a file uploader accepting **PDF/DOCX/TXT/MD**;
 5. one primary **Zusammenfassen** button (disabled until a file is uploaded and

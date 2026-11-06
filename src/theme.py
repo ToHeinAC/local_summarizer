@@ -16,6 +16,7 @@ FOREST = {
     "primary": "#234637",
     "border": "#d4dbd6",
     "hover": "rgba(35,70,55,0.10)",
+    "halo": "rgba(35,70,55,0.22)",
 }
 
 _FONTS = (
@@ -133,6 +134,15 @@ def build_css(t: dict = FOREST) -> str:
     [data-testid="stSidebar"] .st-key-logout_btn button:hover {{
         background-color: {t['hover']} !important;
         border-color: {t['primary']} !important;
+    }}
+
+    /* Optional focus expander (app._focus_input): thick green border + soft halo
+       so users notice it even while collapsed. */
+    .st-key-focus_box details {{
+        border: 3px solid {t['primary']} !important;
+        border-radius: 10px !important;
+        background-color: {t['sidebar_bg']} !important;
+        box-shadow: 0 0 0 4px {t['hover']}, 0 0 22px 6px {t['halo']} !important;
     }}
 
     [data-testid="stAlert"], [data-testid="stAlert"] * {{ color: {t['text']} !important; }}

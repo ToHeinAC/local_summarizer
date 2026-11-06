@@ -171,7 +171,7 @@ def _summary_options(lang: str) -> dict:
 
 def _focus_input(lang: str) -> str:
     """Optional question or direction the summary is oriented on; "" for none."""
-    with st.expander(t("focus_expander", lang), expanded=False):
+    with st.expander(t("focus_expander", lang), expanded=False, key="focus_box"):
         focus = st.text_area(
             t("focus_label", lang),
             placeholder=t("focus_placeholder", lang),
